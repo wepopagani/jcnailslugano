@@ -16,8 +16,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
   
   const formatDate = (date: Date) => {
-    return date.toISOString().replace(/-|:|\.\d+/g, '');
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   };
+
+  // Creo un ID unico per l'evento
+  const eventId = `jcnails-${Date.now()}@jcnails.ch`;
 
   const event = {
     start: formatDate(startDate),
@@ -28,18 +31,31 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   };
 
   const icsContent = `BEGIN:VCALENDAR
+PRODID:-//JC Nails//Appointment Calendar//IT
 VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
 BEGIN:VEVENT
-URL:https://jcnails.ch
+UID:${eventId}
+DTSTAMP:${formatDate(new Date())}
 DTSTART:${event.start}
 DTEND:${event.end}
 SUMMARY:${event.title}
-DESCRIPTION:${event.description}
+DESCRIPTION:${event.description.replace(/\n/g, '\\n')}
 LOCATION:${event.location}
+STATUS:CONFIRMED
+SEQUENCE:0
+BEGIN:VALARM
+TRIGGER:-PT1H
+ACTION:DISPLAY
+DESCRIPTION:Reminder
+END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 
-  res.setHeader('Content-Type', 'text/calendar');
+  // Headers specifici per iOS
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename=appuntamento-jc-nails.ics');
+  res.setHeader('Cache-Control', 'no-cache');
   res.status(200).send(icsContent);
 } 

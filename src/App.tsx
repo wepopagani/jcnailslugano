@@ -126,7 +126,7 @@ function App() {
   };
 
   const bookAppointment = () => {
-    if (selectedAppointment && fullName && phoneNumber && instagram && serviceType) {
+    if (selectedAppointment && fullName && phoneNumber && serviceType) {
       const [firstName, ...lastNameParts] = fullName.trim().split(' ');
       const lastName = lastNameParts.join(' ');
       
@@ -136,7 +136,7 @@ function App() {
         clientName: firstName,
         clientSurname: lastName,
         phoneNumber,
-        instagram,
+        instagram: instagram || null,
         serviceType
       };
       
@@ -171,11 +171,11 @@ function App() {
   const generateCalendarLink = (appointment: Appointment | null) => {
     if (!appointment) return '';
     
-    // Creiamo l'URL per l'endpoint del calendario
-    const calendarUrl = `${window.location.origin}/api/calendar?date=${encodeURIComponent(appointment.date)}&time=${encodeURIComponent(selectedTime)}&service=${encodeURIComponent(serviceType || '')}`;
+    // Creiamo un URL con il protocollo webcal
+    const baseUrl = window.location.origin.replace(/^https?:/, 'webcal:');
+    const calendarUrl = `${baseUrl}/api/calendar?date=${encodeURIComponent(appointment.date)}&time=${encodeURIComponent(appointment.time)}&service=${encodeURIComponent(appointment.serviceType || '')}`;
     
-    // Per iOS, usiamo il protocollo webcal
-    return calendarUrl.replace('https://', 'webcal://').replace('http://', 'webcal://');
+    return calendarUrl;
   };
 
   if (isAdminView) {
@@ -312,16 +312,15 @@ function App() {
               className="absolute right-2 top-2 md:right-4 md:top-4 p-2 rounded-full hover:bg-pink-200 transition-colors"
               title="Area Admin"
             >
-              <Shield className="w-5 h-5 md:w-6 md:h-6 text-pink-800" />
+              <Shield className="w-5 h-10 md:w-6 md:h-6 text-pink-800" />
             </button>
-            <h1 className="font-serif italic">
-              <span className="block text-4xl md:text-6xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold mb-1 md:mb-2">
-                JC
-              </span>
-              <span className="block text-3xl md:text-5xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold">
-                NAILS
-              </span>
-            </h1>
+            <div className="flex flex-col items-center">
+              <img 
+                src="/logo.png" 
+                alt="JC Nails Lugano Logo" 
+                className="w-80 h-60"
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -631,7 +630,7 @@ function App() {
               <button
                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={bookAppointment}
-                disabled={!fullName || !phoneNumber || !instagram || !serviceType}
+                disabled={!fullName || !phoneNumber || !serviceType}
               >
                 Conferma
               </button>
