@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Phone, Sparkles, Shield, Instagram, UserX, Check, CheckCircle } from 'lucide-react';
 import Admin from './pages/Admin';
+import { Helmet } from 'react-helmet';
 
 interface Appointment {
   date: string;
@@ -142,6 +143,121 @@ function App() {
 
   return (
     <div className="min-h-screen bg-pink-50">
+      <Helmet>
+        <title>JC Nails Lugano - Centro Specializzato Ricostruzione Unghie e Nail Art | Semipermanente | Refill</title>
+        <meta name="description" content="JC Nails Lugano: centro estetico specializzato in ricostruzione unghie, semipermanente, nail art e refill. Servizi professionali di manicure e pedicure a Lugano. Tecniche innovative, prodotti di qualità e design personalizzati. Prenota online il tuo appuntamento." />
+        <meta name="keywords" content="ricostruzione unghie Lugano, nail art Ticino, semipermanente Lugano, JC Nails, unghie gel Lugano, nail salon Svizzera, ricostruzione unghie professionale, french manicure, babyboomer nails, refill unghie, copertura in gel, estetista Lugano, manicure Lugano, pedicure Lugano, unghie sposa Lugano, decorazione unghie, brillantini unghie, nail design Ticino, unghie artistiche, extension unghie, ricostruzione naturale, gel unghie, acrilico unghie, smalto semipermanente, centro estetico Lugano, nail bar Lugano, migliore nail artist Lugano, unghie su misura, trattamenti unghie, cura mani, cura unghie, tendenze unghie, nail trends, unghie fashion" />
+        
+        {/* Meta tag aggiuntivi */}
+        <meta name="author" content="JC Nails Lugano" />
+        <meta name="robots" content="index, follow" />
+        <meta name="language" content="it-IT" />
+        <meta name="revisit-after" content="7 days" />
+        <meta name="rating" content="safe for kids" />
+        <meta name="geo.region" content="CH-TI" />
+        <meta name="geo.placename" content="Lugano" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="JC Nails Lugano - Centro Professionale Ricostruzione Unghie e Nail Art" />
+        <meta property="og:description" content="Centro specializzato in ricostruzione unghie, semipermanente e nail art a Lugano. Design personalizzati, tecniche innovative e prodotti di alta qualità. Prenota il tuo appuntamento online." />
+        <meta property="og:image" content="/logo.png" />
+        <meta property="og:site_name" content="JC Nails Lugano" />
+        <meta property="og:locale" content="it_IT" />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="JC Nails Lugano - Nail Art e Ricostruzione Unghie" />
+        <meta name="twitter:description" content="Servizi professionali di nail art e ricostruzione unghie a Lugano. Esperienza, qualità e design personalizzato per le tue unghie." />
+        <meta name="twitter:image" content="/logo.png" />
+        
+        {/* Favicon e icone */}
+        <link rel="icon" type="image/png" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+        
+        {/* Dati strutturati per Google */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NailSalon",
+            "name": "JC Nails Lugano",
+            "image": "/logo.png",
+            "logo": "/logo.png",
+            "@id": "https://jcnails.ch",
+            "url": "https://jcnails.ch",
+            "telephone": "+41766070544",
+            "priceRange": "$$",
+            "description": "Centro professionale specializzato in ricostruzione unghie, semipermanente, nail art e trattamenti estetici a Lugano",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "Via Lugano",
+              "addressLocality": "Lugano",
+              "addressRegion": "Ticino",
+              "postalCode": "6900",
+              "addressCountry": "CH"
+            },
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": "46.0037",
+              "longitude": "8.9511"
+            },
+            "openingHours": [
+              "Mo 10:00-19:00",
+              "We 17:00-20:00",
+              "Fr 17:00-20:00",
+              "Sa 17:00-20:00",
+              "Su 10:00-13:00"
+            ],
+            "sameAs": [
+              "https://instagram.com/jcnailslugano"
+            ],
+            "offers": {
+              "@type": "AggregateOffer",
+              "offers": [
+                {
+                  "@type": "Offer",
+                  "name": "Semipermanente",
+                  "price": "35",
+                  "priceCurrency": "CHF"
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Ricostruzione base",
+                  "price": "60",
+                  "priceCurrency": "CHF"
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Refill",
+                  "price": "50",
+                  "priceCurrency": "CHF"
+                }
+              ]
+            },
+            "makesOffer": {
+              "@type": "Offer",
+              "itemOffered": [
+                {
+                  "@type": "Service",
+                  "name": "Ricostruzione Unghie",
+                  "description": "Servizio professionale di ricostruzione unghie con tecniche innovative"
+                },
+                {
+                  "@type": "Service",
+                  "name": "Nail Art",
+                  "description": "Design personalizzati e decorazioni artistiche per le tue unghie"
+                },
+                {
+                  "@type": "Service",
+                  "name": "Semipermanente",
+                  "description": "Applicazione di smalto semipermanente di alta qualità"
+                }
+              ]
+            }
+          })}
+        </script>
+      </Helmet>
+
       {/* Header */}
       <header className="bg-gradient-to-b from-pink-100 to-pink-50 shadow-md py-8">
         <div className="text-center relative">
