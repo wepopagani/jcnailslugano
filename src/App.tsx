@@ -21,7 +21,18 @@ interface Service {
 
 function App() {
   const [isAdminView, setIsAdminView] = useState(false);
-  const [currentWeekStart, setCurrentWeekStart] = useState(new Date('2025-03-24'));
+  
+  // Imposto la data di inizio alla prossima settimana
+  const getInitialWeekStart = () => {
+    const today = new Date();
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
+    nextMonday.setHours(0, 0, 0, 0);
+    return nextMonday;
+  };
+
+  const [currentWeekStart, setCurrentWeekStart] = useState(getInitialWeekStart());
+  const [isWeekSelectorOpen, setIsWeekSelectorOpen] = useState(false);
   const services: Service[] = [
     { name: "Semipermanente", price: "35 CHF" },
     { name: "Ricostruzione base", price: "60 CHF" },
@@ -95,14 +106,22 @@ function App() {
   const [selectedTime, setSelectedTime] = useState<string>('10:00');
 
   const navigateWeek = (direction: 'prev' | 'next') => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const newDate = new Date(currentWeekStart);
     if (direction === 'next') {
       newDate.setDate(newDate.getDate() + 7);
+      setCurrentWeekStart(newDate);
+      setAppointments(generateAppointments(newDate));
     } else {
       newDate.setDate(newDate.getDate() - 7);
+      // Permetti di andare indietro solo se la nuova data è nel futuro
+      if (newDate >= today) {
+        setCurrentWeekStart(newDate);
+        setAppointments(generateAppointments(newDate));
+      }
     }
-    setCurrentWeekStart(newDate);
-    setAppointments(generateAppointments(newDate));
   };
 
   const bookAppointment = () => {
@@ -309,54 +328,90 @@ END:VCALENDAR`;
       </Helmet>
 
       {/* Header */}
-      <header className="bg-gradient-to-b from-pink-100 to-pink-50 shadow-md py-8">
-        <div className="text-center relative">
-          <button
-            onClick={() => setIsAdminView(true)}
-            className="absolute right-4 top-4 p-2 rounded-full hover:bg-pink-200 transition-colors"
-            title="Area Admin"
-          >
-            <Shield className="w-6 h-6 text-pink-800" />
-          </button>
-          <h1 className="font-serif italic">
-            <span className="block text-5xl md:text-6xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold mb-2">
-              JC
-            </span>
-            <span className="block text-4xl md:text-5xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold">
-              NAILS
-            </span>
-          </h1>
+      <header className="bg-gradient-to-b from-pink-100 to-pink-50 shadow-md py-4 md:py-8">
+        <div className="container mx-auto px-4">
+          <div className="text-center relative">
+            <button
+              onClick={() => setIsAdminView(true)}
+              className="absolute right-2 top-2 md:right-4 md:top-4 p-2 rounded-full hover:bg-pink-200 transition-colors"
+              title="Area Admin"
+            >
+              <Shield className="w-5 h-5 md:w-6 md:h-6 text-pink-800" />
+            </button>
+            <h1 className="font-serif italic">
+              <span className="block text-4xl md:text-6xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold mb-1 md:mb-2">
+                JC
+              </span>
+              <span className="block text-3xl md:text-5xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold">
+                NAILS
+              </span>
+            </h1>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 space-y-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
         {/* Appointments Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-pink-800 flex items-center gap-2">
-              <Calendar className="w-6 h-6" />
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <h2 className="text-xl md:text-2xl font-semibold text-pink-800 flex items-center gap-2">
+              <Calendar className="w-5 h-5 md:w-6 md:h-6" />
               Disponibilità Appuntamenti
             </h2>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center gap-2 md:gap-4">
               <button
                 onClick={() => navigateWeek('prev')}
                 className="p-2 rounded-full hover:bg-pink-100 transition-colors"
                 title="Settimana precedente"
               >
-                <ChevronLeft className="w-6 h-6 text-pink-600" />
+                <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-pink-600" />
               </button>
-              <span className="text-pink-800 font-medium">
-                {currentWeekStart.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {
-                  new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                }
-              </span>
+              <div className="relative">
+                <button
+                  onClick={() => setIsWeekSelectorOpen(!isWeekSelectorOpen)}
+                  className="text-sm md:text-base text-pink-800 font-medium px-4 py-2 rounded-lg hover:bg-pink-50 transition-colors flex items-center gap-2"
+                >
+                  <span>
+                    {currentWeekStart.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {
+                      new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    }
+                  </span>
+                  <ChevronRight className={`w-4 h-4 transition-transform ${isWeekSelectorOpen ? 'rotate-90' : ''}`} />
+                </button>
+                
+                {isWeekSelectorOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-pink-100 z-10">
+                    {[...Array(4)].map((_, index) => {
+                      const weekStart = new Date(currentWeekStart.getTime());
+                      weekStart.setDate(weekStart.getDate() + (index * 7));
+                      const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+                      
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setCurrentWeekStart(weekStart);
+                            setAppointments(generateAppointments(weekStart));
+                            setIsWeekSelectorOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-pink-50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                        >
+                          {weekStart.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {
+                            weekEnd.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                          }
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => navigateWeek('next')}
                 className="p-2 rounded-full hover:bg-pink-100 transition-colors"
                 title="Settimana successiva"
               >
-                <ChevronRight className="w-6 h-6 text-pink-600" />
+                <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-pink-600" />
               </button>
             </div>
           </div>
