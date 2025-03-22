@@ -425,7 +425,7 @@ function App() {
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 max-w-4xl mx-auto">
           <h3 className="text-xl font-semibold text-pink-800 mb-4 flex items-center gap-2">
             <Shield className="w-6 h-6" />
-            Policy del Salone
+            Rules
           </h3>
           <div className="space-y-2 md:grid md:grid-cols-3 md:gap-4 md:space-y-0">
             <div className="flex items-center gap-3 p-3 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
@@ -487,12 +487,6 @@ function App() {
                   <Check className="w-5 h-5" />
                   <span>Ti aspettiamo {confirmedAppointment?.day} {confirmedAppointment?.date} alle {confirmedAppointment?.time} in Via Ferruccio Pelli 14, Lugano.</span>
                 </div>
-                <a
-                  href={generateCalendarLink(confirmedAppointment)}
-                  className="inline-block px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
-                >
-                  📅 Aggiungi al Calendario
-                </a>
                 <p className="text-gray-600">
                   Se hai ulteriori domande o chiarimenti contattaci:
                 </p>
@@ -524,6 +518,9 @@ function App() {
                   setPhoneNumber('');
                   setServiceType(null);
                   setConfirmedAppointment(null);
+                  setSelectedTime('10:00');
+                  // Aggiorniamo gli appuntamenti per riflettere lo stato corrente
+                  setAppointments(generateAppointments(currentWeekStart));
                 }}
               >
                 Chiudi

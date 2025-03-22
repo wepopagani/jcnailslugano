@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Search, Trash2, LogOut, Instagram, Sparkles, Filter, Edit, X, Phone } from 'lucide-react';
+import { Calendar, Search, Trash2, LogOut, Instagram, Sparkles, Filter, Edit, X, Phone, ChevronLeft } from 'lucide-react';
 
 interface Appointment {
   date: string;
@@ -217,6 +217,13 @@ const Admin: React.FC<{
               onClick={handleLogin}
             >
               Accedi
+            </button>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center justify-center gap-2"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Torna alla Home
             </button>
           </div>
         </div>
