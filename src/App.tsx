@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Phone, Sparkles, Shield, Instagram, UserX, Check, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import Admin from './pages/Admin';
 import { Helmet } from 'react-helmet';
+import { db } from './firebase';
+import { collection, query, getDocs, addDoc, updateDoc, doc, deleteDoc, where } from 'firebase/firestore';
 
 interface Appointment {
+  id?: string;
   date: string;
   day: string;
   time: string;
@@ -100,18 +103,47 @@ function App() {
   };
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    // Carica gli appuntamenti dal localStorage all'avvio
-    const savedAppointments = localStorage.getItem('appointments');
-    if (savedAppointments) {
-      return JSON.parse(savedAppointments);
-    }
+    // Inizializziamo con gli appuntamenti generati
     return generateAppointments(getInitialWeekStart());
   });
 
-  // Salva gli appuntamenti nel localStorage ogni volta che cambiano
+  // Nuovo useEffect per caricare gli appuntamenti da Firebase
   useEffect(() => {
-    localStorage.setItem('appointments', JSON.stringify(appointments));
-  }, [appointments]);
+    const loadAppointments = async () => {
+      try {
+        const appointmentsRef = collection(db, 'appointments');
+        // Modifica la query per usare la data in formato stringa
+        const startDate = currentWeekStart.toLocaleDateString('it-IT', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        });
+        
+        const q = query(appointmentsRef, where('date', '>=', startDate));
+        const querySnapshot = await getDocs(q);
+        
+        const loadedAppointments = querySnapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        })) as Appointment[];
+
+        // Combina gli appuntamenti generati con quelli caricati
+        const generatedAppointments = generateAppointments(currentWeekStart);
+        const mergedAppointments = generatedAppointments.map(genApt => {
+          const existingApt = loadedAppointments.find(
+            loadedApt => loadedApt.date === genApt.date && loadedApt.time === genApt.time
+          );
+          return existingApt || genApt;
+        });
+
+        setAppointments(mergedAppointments);
+      } catch (error) {
+        console.error('Errore nel caricamento degli appuntamenti:', error);
+      }
+    };
+
+    loadAppointments();
+  }, [currentWeekStart]);
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [fullName, setFullName] = useState('');
@@ -119,7 +151,6 @@ function App() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [selectedTime, setSelectedTime] = useState<string>('10:00');
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -130,57 +161,90 @@ function App() {
     if (direction === 'next') {
       newDate.setDate(newDate.getDate() + 7);
       setCurrentWeekStart(newDate);
-      setAppointments(generateAppointments(newDate));
     } else {
       newDate.setDate(newDate.getDate() - 7);
-      // Permetti di andare indietro solo se la nuova data è nel futuro
       if (newDate >= today) {
         setCurrentWeekStart(newDate);
-        setAppointments(generateAppointments(newDate));
       }
     }
   };
 
-  const bookAppointment = () => {
+  const bookAppointment = async () => {
     if (selectedAppointment && fullName && phoneNumber && serviceType) {
       const [firstName, ...lastNameParts] = fullName.trim().split(' ');
       const lastName = lastNameParts.join(' ');
       
       const updatedAppointment = {
-        ...selectedAppointment,
+        date: selectedAppointment.date,
+        day: selectedAppointment.day,
+        time: selectedAppointment.time,
         clientName: firstName,
         clientSurname: lastName,
         phoneNumber,
         instagram: instagram || null,
         serviceType
       };
-      
-      setAppointments(appointments.map(apt => 
-        apt.date === selectedAppointment.date && apt.time === selectedAppointment.time
-          ? updatedAppointment
-          : apt
-      ));
-      
-      setConfirmedAppointment(updatedAppointment);
-      setSelectedAppointment(null);
-      setShowSuccess(true);
+
+      try {
+        const appointmentsRef = collection(db, 'appointments');
+        const docRef = await addDoc(appointmentsRef, updatedAppointment);
+        
+        const appointmentWithId = {
+          ...updatedAppointment,
+          id: docRef.id
+        };
+
+        setAppointments(appointments.map(apt => 
+          apt.date === selectedAppointment.date && apt.time === selectedAppointment.time
+            ? appointmentWithId
+            : apt
+        ));
+        
+        setConfirmedAppointment(appointmentWithId);
+        setSelectedAppointment(null);
+        setShowSuccess(true);
+      } catch (error) {
+        console.error('Errore nel salvare l\'appuntamento:', error);
+        alert('Si è verificato un errore durante il salvataggio dell\'appuntamento. Riprova più tardi.');
+      }
     }
   };
 
-  const deleteAppointment = (appointmentToDelete: Appointment) => {
-    setAppointments(appointments.map(apt => 
-      apt.date === appointmentToDelete.date && apt.time === appointmentToDelete.time
-        ? { ...apt, clientName: null, clientSurname: null, phoneNumber: null, instagram: null, serviceType: null }
-        : apt
-    ));
+  const deleteAppointment = async (appointmentToDelete: Appointment) => {
+    try {
+      if ('id' in appointmentToDelete && appointmentToDelete.id) {
+        const appointmentRef = doc(db, 'appointments', appointmentToDelete.id);
+        await deleteDoc(appointmentRef);
+      }
+
+      // Aggiorna lo stato locale
+      setAppointments(appointments.map(apt => 
+        apt.date === appointmentToDelete.date && apt.time === appointmentToDelete.time
+          ? { ...apt, clientName: null, clientSurname: null, phoneNumber: null, instagram: null, serviceType: null }
+          : apt
+      ));
+    } catch (error) {
+      console.error('Errore nell\'eliminazione dell\'appuntamento:', error);
+    }
   };
 
-  const updateAppointment = (oldAppointment: Appointment, newAppointment: Appointment) => {
-    setAppointments(appointments.map(apt => 
-      apt.date === oldAppointment.date && apt.time === oldAppointment.time
-        ? newAppointment
-        : apt
-    ));
+  const updateAppointment = async (oldAppointment: Appointment, newAppointment: Appointment) => {
+    try {
+      if ('id' in oldAppointment && oldAppointment.id) {
+        const appointmentRef = doc(db, 'appointments', oldAppointment.id);
+        // Rimuoviamo l'id prima di inviare l'aggiornamento
+        const { id, ...appointmentWithoutId } = newAppointment;
+        await updateDoc(appointmentRef, appointmentWithoutId);
+      }
+
+      setAppointments(appointments.map(apt => 
+        apt.date === oldAppointment.date && apt.time === oldAppointment.time
+          ? newAppointment
+          : apt
+      ));
+    } catch (error) {
+      console.error('Errore nell\'aggiornamento dell\'appuntamento:', error);
+    }
   };
 
   if (isAdminView) {

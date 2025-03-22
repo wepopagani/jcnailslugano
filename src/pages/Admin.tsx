@@ -150,7 +150,7 @@ const Admin: React.FC<{
 
   const handleLogin = () => {
     // Password semplice per demo - in produzione usare un sistema più sicuro
-    if (password === 'admin123') {
+    if (password === 'Ciao2704') {
       setIsAuthenticated(true);
       setError('');
     } else {
