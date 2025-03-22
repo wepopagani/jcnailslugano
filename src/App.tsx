@@ -34,17 +34,17 @@ function App() {
   const [currentWeekStart, setCurrentWeekStart] = useState(getInitialWeekStart());
   const [isWeekSelectorOpen, setIsWeekSelectorOpen] = useState(false);
   const services: Service[] = [
-    { name: "Semipermanente", price: "35 CHF" },
+    { name: "Semipermanente", price: "40 CHF" },
     { name: "Ricostruzione base", price: "60 CHF" },
     { name: "Ricostruzione M", price: "+5 CHF" },
     { name: "Ricostruzione L", price: "+10 CHF" },
     { name: "Ricostruzione XL", price: "+15 CHF" },
+    { name: "Refill", price: "50 CHF" },
+    { name: "Copertura in gel", price: "50 CHF" },
     { name: "Smontaggio", price: "+10 CHF" },
     { name: "Smontaggio completo", price: "20 CHF" },
     { name: "French/babyboomer", price: "+10 CHF" },
     { name: "Decorazioni, charm, brillantini", price: "+5 CHF" },
-    { name: "Refill", price: "50 CHF" },
-    { name: "Copertura in gel", price: "45 CHF" }
   ];
 
   const generateAppointments = (baseDate: Date) => {
@@ -421,6 +421,40 @@ function App() {
           </div>
         </div>
 
+        {/* Policy Section */}
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+          <h2 className="text-2xl font-semibold text-pink-800 mb-6 flex items-center gap-2">
+            <Shield className="w-6 h-6" />
+            Policy del Salone
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="flex items-center justify-center mb-2 text-pink-600">
+                <Clock className="w-6 h-6" />
+              </div>
+              <p className="text-center text-gray-700">
+                Si prega di disdire con 24 ore di anticipo
+              </p>
+            </div>
+            <div className="p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="flex items-center justify-center mb-2 text-pink-600">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <p className="text-center text-gray-700">
+                Il prezzo del refill varia in base alla lunghezza
+              </p>
+            </div>
+            <div className="p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="flex items-center justify-center mb-2 text-pink-600">
+                <UserX className="w-6 h-6" />
+              </div>
+              <p className="text-center text-gray-700">
+                No Accompagnatori
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Price List Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
           <h2 className="text-2xl font-semibold text-pink-800 mb-6 flex items-center gap-2">
@@ -440,41 +474,6 @@ function App() {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-gradient-to-t from-pink-100 to-pink-50 py-12 mt-8 pb-24">
-        <div className="container mx-auto px-4">
-          <h3 className="text-xl font-semibold text-pink-800 mb-4 text-center">
-            Policy del Salone
-          </h3>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <div className="flex items-center justify-center mb-2 text-pink-600">
-                <Clock className="w-6 h-6" />
-              </div>
-              <p className="text-center text-gray-700">
-                Si prega di disdire con 24 ore di anticipo
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <div className="flex items-center justify-center mb-2 text-pink-600">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <p className="text-center text-gray-700">
-                Il prezzo del refill varia in base alla lunghezza
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <div className="flex items-center justify-center mb-2 text-pink-600">
-                <UserX className="w-6 h-6" />
-              </div>
-              <p className="text-center text-gray-700">
-                No Accompagnatori
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
 
       {/* Success Modal */}
       {showSuccess && (
