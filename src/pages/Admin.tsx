@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Search, Trash2, LogOut, Instagram, Sparkles, Filter, Edit, X, Phone, ChevronLeft } from 'lucide-react';
+import { Calendar, Search, Trash2, LogOut, Instagram, Sparkles, Filter, Edit, X, ChevronLeft } from 'lucide-react';
 
 interface Appointment {
   date: string;
@@ -146,10 +146,11 @@ const Admin: React.FC<{
   const [filterService, setFilterService] = useState<Appointment['serviceType']>(null);
   const [error, setError] = useState('');
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [deletingAppointment, setDeletingAppointment] = useState<Appointment | null>(null);
 
   const handleLogin = () => {
     // Password semplice per demo - in produzione usare un sistema più sicuro
-    if (password === 'Ciao2704') {
+    if (password === 'admin123') {
       setIsAuthenticated(true);
       setError('');
     } else {
@@ -164,6 +165,17 @@ const Admin: React.FC<{
 
   const handleEdit = (appointment: Appointment) => {
     setEditingAppointment(appointment);
+  };
+
+  const handleDelete = (appointment: Appointment) => {
+    setDeletingAppointment(appointment);
+  };
+
+  const confirmDelete = () => {
+    if (deletingAppointment) {
+      onDeleteAppointment(deletingAppointment);
+      setDeletingAppointment(null);
+    }
   };
 
   const handleSaveEdit = (updatedAppointment: Appointment) => {
@@ -232,24 +244,33 @@ const Admin: React.FC<{
   }
 
   return (
-    <div className="min-h-screen bg-pink-50 p-4 md:p-6">
+    <div className="min-h-screen bg-pink-50 p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl md:text-3xl font-semibold text-pink-800 flex items-center gap-2">
-            <Calendar className="w-6 h-6 md:w-8 md:h-8" />
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-semibold text-pink-800 flex items-center gap-2">
+            <Calendar className="w-8 h-8" />
             Gestione Appuntamenti
           </h1>
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 w-full md:w-auto"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => window.location.href = '/'}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Torna alla Home
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
@@ -260,9 +281,9 @@ const Admin: React.FC<{
                 onChange={(e) => setSearchDate(e.target.value)}
               />
             </div>
-            <div className="relative w-full md:w-auto">
+            <div className="relative">
               <select
-                className="w-full md:w-auto pl-10 p-2 border border-pink-200 rounded-lg appearance-none pr-8"
+                className="pl-10 p-2 border border-pink-200 rounded-lg appearance-none pr-8"
                 value={filterService || ''}
                 onChange={(e) => setFilterService(e.target.value as Appointment['serviceType'] || null)}
               >
@@ -277,80 +298,7 @@ const Admin: React.FC<{
             </div>
           </div>
 
-          {/* Vista mobile: Cards */}
-          <div className="md:hidden space-y-4">
-            {filteredAppointments.map((apt, index) => (
-              <div 
-                key={`${apt.date}-${apt.time}-${index}`}
-                className="bg-white border border-pink-100 rounded-lg p-4 space-y-3"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-semibold text-pink-800">{apt.day} {apt.date}</div>
-                    <div className="text-lg">{apt.time}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(apt)}
-                      className="text-blue-500 hover:text-blue-700 p-2"
-                      title="Modifica"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    {apt.clientName && (
-                      <button
-                        onClick={() => onDeleteAppointment(apt)}
-                        className="text-red-500 hover:text-red-700 p-2"
-                        title="Elimina"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {apt.clientName && (
-                  <>
-                    <div className="pt-2 border-t border-pink-100">
-                      <div className="font-medium">Cliente:</div>
-                      <div>{apt.clientName} {apt.clientSurname}</div>
-                    </div>
-
-                    <div>
-                      <div className="font-medium">Contatti:</div>
-                      <div className="space-y-1">
-                        {apt.phoneNumber && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-4 h-4 text-gray-500" />
-                            {apt.phoneNumber}
-                          </div>
-                        )}
-                        {apt.instagram && (
-                          <div className="flex items-center gap-2">
-                            <Instagram className="w-4 h-4 text-gray-500" />
-                            @{apt.instagram}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {apt.serviceType && (
-                      <div>
-                        <div className="font-medium">Servizio:</div>
-                        <div className={`flex items-center gap-1 ${getServiceColor(apt.serviceType)}`}>
-                          <Sparkles className="w-4 h-4" />
-                          {apt.serviceType.charAt(0).toUpperCase() + apt.serviceType.slice(1)}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Vista desktop: Tabella */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-pink-50">
@@ -404,7 +352,7 @@ const Admin: React.FC<{
                         </button>
                         {apt.clientName && (
                           <button
-                            onClick={() => onDeleteAppointment(apt)}
+                            onClick={() => handleDelete(apt)}
                             className="text-red-500 hover:text-red-700"
                             title="Elimina"
                           >
@@ -427,6 +375,38 @@ const Admin: React.FC<{
           onSave={handleSaveEdit}
           onClose={() => setEditingAppointment(null)}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold text-red-600 mb-4">
+                Conferma Cancellazione
+              </h3>
+              <p className="text-gray-700 mb-6">
+                Sei sicuro di voler cancellare l'appuntamento di{' '}
+                <span className="font-semibold">{deletingAppointment.clientName} {deletingAppointment.clientSurname}</span>{' '}
+                del {deletingAppointment.day} {deletingAppointment.date} alle {deletingAppointment.time}?
+              </p>
+              <div className="flex justify-center gap-4">
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  onClick={confirmDelete}
+                >
+                  Sì, Cancella
+                </button>
+                <button
+                  className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  onClick={() => setDeletingAppointment(null)}
+                >
+                  No, Mantieni
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

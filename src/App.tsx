@@ -45,6 +45,7 @@ function App() {
     { name: "Smontaggio completo", price: "20 CHF" },
     { name: "French/babyboomer", price: "+10 CHF" },
     { name: "Decorazioni, charm, brillantini", price: "+5 CHF" },
+
   ];
 
   const generateAppointments = (baseDate: Date) => {
@@ -104,7 +105,6 @@ function App() {
   const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string>('10:00');
-  const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const today = new Date();
@@ -126,26 +126,23 @@ function App() {
   };
 
   const bookAppointment = () => {
-    if (selectedAppointment && fullName && phoneNumber && serviceType) {
+    if (selectedAppointment && fullName && phoneNumber && instagram && serviceType) {
       const [firstName, ...lastNameParts] = fullName.trim().split(' ');
       const lastName = lastNameParts.join(' ');
       
-      const newAppointment = { 
-        ...selectedAppointment, 
-        time: selectedTime,
-        clientName: firstName,
-        clientSurname: lastName,
-        phoneNumber,
-        instagram: instagram || null,
-        serviceType
-      };
-      
       setAppointments(appointments.map(apt => 
         apt.date === selectedAppointment.date
-          ? newAppointment
+          ? { 
+              ...apt, 
+              time: selectedTime,
+              clientName: firstName,
+              clientSurname: lastName,
+              phoneNumber,
+              instagram,
+              serviceType
+            }
           : apt
       ));
-      setConfirmedAppointment(newAppointment);
       setSelectedAppointment(null);
       setShowSuccess(true);
       setSelectedTime('10:00');
@@ -166,16 +163,6 @@ function App() {
         ? newAppointment
         : apt
     ));
-  };
-
-  const generateCalendarLink = (appointment: Appointment | null) => {
-    if (!appointment) return '';
-    
-    // Creiamo un URL con il protocollo webcal
-    const baseUrl = window.location.origin.replace(/^https?:/, 'webcal:');
-    const calendarUrl = `${baseUrl}/api/calendar?date=${encodeURIComponent(appointment.date)}&time=${encodeURIComponent(appointment.time)}&service=${encodeURIComponent(appointment.serviceType || '')}`;
-    
-    return calendarUrl;
   };
 
   if (isAdminView) {
@@ -306,21 +293,23 @@ function App() {
       {/* Header */}
       <header className="bg-gradient-to-b from-pink-100 to-pink-50 shadow-md py-4 md:py-8">
         <div className="container mx-auto px-4">
-          <div className="text-center relative">
+          <div className="text-center relative flex flex-col items-center gap-4">
             <button
               onClick={() => setIsAdminView(true)}
               className="absolute right-2 top-2 md:right-4 md:top-4 p-2 rounded-full hover:bg-pink-200 transition-colors"
               title="Area Admin"
             >
-              <Shield className="w-5 h-10 md:w-6 md:h-6 text-pink-800" />
+              <Shield className="w-5 h-5 md:w-6 md:h-6 text-pink-800" />
             </button>
-            <div className="flex flex-col items-center">
+            
+            <div className="w-80 h-60">
               <img 
                 src="/logo.png" 
                 alt="JC Nails Lugano Logo" 
-                className="w-80 h-60"
+                className="w-full h-full object-cover"
               />
             </div>
+            
           </div>
         </div>
       </header>
@@ -397,24 +386,19 @@ function App() {
               .map((apt, index) => (
                 <div 
                   key={`${apt.date}-${apt.time}-${index}`}
-                  className="p-4 rounded-lg border bg-white border-pink-200 hover:border-pink-400 cursor-pointer"
+                  className="p-4 rounded-lg border bg-white border-pink-200 hover:border-pink-400 cursor-pointer h-[120px] flex flex-col justify-between"
                   onClick={() => setSelectedAppointment(apt)}
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-pink-800">
                         {apt.day} - {apt.date}
-                        {apt.day === 'Lunedì' && (
-                          <span className="ml-2 text-sm bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
-                            3 slot
-                          </span>
-                        )}
                       </span>
                     </div>
                     <Clock className="w-5 h-5 text-pink-600" />
                   </div>
                   <div className="text-2xl font-bold text-pink-700">
-                    {apt.day === 'Lunedì' ? 'Scegli orario' : apt.time}
+                    {apt.time}
                   </div>
                 </div>
               ))}
@@ -422,26 +406,32 @@ function App() {
         </div>
 
         {/* Policy Section */}
-        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 max-w-4xl mx-auto">
-          <h3 className="text-xl font-semibold text-pink-800 mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+          <h2 className="text-2xl font-semibold text-pink-800 mb-6 flex items-center gap-2">
             <Shield className="w-6 h-6" />
             Rules
-          </h3>
-          <div className="space-y-2 md:grid md:grid-cols-3 md:gap-4 md:space-y-0">
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
-              <Clock className="w-5 h-5 text-pink-600 shrink-0" />
+          </h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="text-pink-600">
+                <Clock className="w-6 h-6" />
+              </div>
               <p className="text-gray-700">
                 Si prega di disdire con 24 ore di anticipo
               </p>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
-              <Sparkles className="w-5 h-5 text-pink-600 shrink-0" />
+            <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="text-pink-600">
+                <Sparkles className="w-6 h-6" />
+              </div>
               <p className="text-gray-700">
                 Il prezzo del refill varia in base alla lunghezza
               </p>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
-              <UserX className="w-5 h-5 text-pink-600 shrink-0" />
+            <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="text-pink-600">
+                <UserX className="w-6 h-6" />
+              </div>
               <p className="text-gray-700">
                 No Accompagnatori
               </p>
@@ -469,6 +459,30 @@ function App() {
         </div>
       </main>
 
+      {/* Footer */}
+      <footer className="bg-gradient-to-t from-pink-100 to-pink-50 py-12 mt-8 pb-24">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center gap-6">
+            <a 
+              href="https://instagram.com/jcnailslugano" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-pink-600 hover:text-pink-700"
+            >
+              <Instagram className="w-5 h-5" />
+              @jcnailslugano
+            </a>
+            <a 
+              href="tel:0766070544"
+              className="flex items-center gap-2 text-pink-600 hover:text-pink-700"
+            >
+              <Phone className="w-5 h-5" />
+              0766070544
+            </a>
+          </div>
+        </div>
+      </footer>
+
       {/* Success Modal */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -485,7 +499,7 @@ function App() {
               <div className="space-y-4 mt-6">
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <Check className="w-5 h-5" />
-                  <span>Ti aspettiamo {confirmedAppointment?.day} {confirmedAppointment?.date} alle {confirmedAppointment?.time} in Via Ferruccio Pelli 14, Lugano.</span>
+                  <p>Ti aspettiamo il {selectedAppointment?.day} {selectedAppointment?.date} alle {selectedTime}</p>
                 </div>
                 <p className="text-gray-600">
                   Se hai ulteriori domande o chiarimenti contattaci:
@@ -517,10 +531,6 @@ function App() {
                   setInstagram('');
                   setPhoneNumber('');
                   setServiceType(null);
-                  setConfirmedAppointment(null);
-                  setSelectedTime('10:00');
-                  // Aggiorniamo gli appuntamenti per riflettere lo stato corrente
-                  setAppointments(generateAppointments(currentWeekStart));
                 }}
               >
                 Chiudi
@@ -620,7 +630,7 @@ function App() {
               <button
                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={bookAppointment}
-                disabled={!fullName || !phoneNumber || !serviceType}
+                disabled={!fullName || !phoneNumber || !instagram || !serviceType}
               >
                 Conferma
               </button>
