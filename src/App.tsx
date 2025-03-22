@@ -422,33 +422,27 @@ function App() {
         </div>
 
         {/* Policy Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-semibold text-pink-800 mb-6 flex items-center gap-2">
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 max-w-4xl mx-auto">
+          <h3 className="text-xl font-semibold text-pink-800 mb-4 flex items-center gap-2">
             <Shield className="w-6 h-6" />
             Policy del Salone
-          </h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
-              <div className="flex items-center justify-center mb-2 text-pink-600">
-                <Clock className="w-6 h-6" />
-              </div>
-              <p className="text-center text-gray-700">
+          </h3>
+          <div className="space-y-2 md:grid md:grid-cols-3 md:gap-4 md:space-y-0">
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <Clock className="w-5 h-5 text-pink-600 shrink-0" />
+              <p className="text-gray-700">
                 Si prega di disdire con 24 ore di anticipo
               </p>
             </div>
-            <div className="p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
-              <div className="flex items-center justify-center mb-2 text-pink-600">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <p className="text-center text-gray-700">
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <Sparkles className="w-5 h-5 text-pink-600 shrink-0" />
+              <p className="text-gray-700">
                 Il prezzo del refill varia in base alla lunghezza
               </p>
             </div>
-            <div className="p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
-              <div className="flex items-center justify-center mb-2 text-pink-600">
-                <UserX className="w-6 h-6" />
-              </div>
-              <p className="text-center text-gray-700">
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <UserX className="w-5 h-5 text-pink-600 shrink-0" />
+              <p className="text-gray-700">
                 No Accompagnatori
               </p>
             </div>
