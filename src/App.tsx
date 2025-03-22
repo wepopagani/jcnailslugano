@@ -104,6 +104,7 @@ function App() {
   const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string>('10:00');
+  const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const today = new Date();
@@ -129,19 +130,22 @@ function App() {
       const [firstName, ...lastNameParts] = fullName.trim().split(' ');
       const lastName = lastNameParts.join(' ');
       
+      const newAppointment = { 
+        ...selectedAppointment, 
+        time: selectedTime,
+        clientName: firstName,
+        clientSurname: lastName,
+        phoneNumber,
+        instagram,
+        serviceType
+      };
+      
       setAppointments(appointments.map(apt => 
         apt.date === selectedAppointment.date
-          ? { 
-              ...apt, 
-              time: selectedTime,
-              clientName: firstName,
-              clientSurname: lastName,
-              phoneNumber,
-              instagram,
-              serviceType
-            }
+          ? newAppointment
           : apt
       ));
+      setConfirmedAppointment(newAppointment);
       setSelectedAppointment(null);
       setShowSuccess(true);
       setSelectedTime('10:00');
@@ -167,39 +171,11 @@ function App() {
   const generateCalendarLink = (appointment: Appointment | null) => {
     if (!appointment) return '';
     
-    const [day, month, year] = appointment.date.split('/');
-    const [hours, minutes] = appointment.time.split(':');
+    // Creiamo l'URL per l'endpoint del calendario
+    const calendarUrl = `${window.location.origin}/api/calendar?date=${encodeURIComponent(appointment.date)}&time=${encodeURIComponent(selectedTime)}&service=${encodeURIComponent(serviceType || '')}`;
     
-    // Creo la data di inizio
-    const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
-    // Aggiungo un'ora per la fine dell'appuntamento
-    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-    
-    const formatDate = (date: Date) => {
-      return date.toISOString().replace(/-|:|\.\d+/g, '');
-    };
-    
-    const event = {
-      title: `Appuntamento JC Nails - ${serviceType} - ${appointment.date}`,
-      start: formatDate(startDate),
-      end: formatDate(endDate),
-      description: `Appuntamento per ${serviceType} da JC Nails Lugano\nInstagram: @jcnailslugano\nTel: 0766070544\n\nVia Ferruccio Pelli 14, 6° piano\n6900 Lugano`,
-      location: 'Via Ferruccio Pelli 14, 6900 Lugano, Svizzera',
-    };
-    
-    const calendarUrl = `data:text/calendar;charset=utf-8,BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-URL:https://jcnails.ch
-DTSTART:${event.start}
-DTEND:${event.end}
-SUMMARY:${event.title}
-DESCRIPTION:${event.description}
-LOCATION:${event.location}
-END:VEVENT
-END:VCALENDAR`;
-
-    return encodeURI(calendarUrl);
+    // Per iOS, usiamo il protocollo webcal
+    return calendarUrl.replace('https://', 'webcal://').replace('http://', 'webcal://');
   };
 
   if (isAdminView) {
@@ -517,12 +493,11 @@ END:VCALENDAR`;
               <div className="space-y-4 mt-6">
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <Check className="w-5 h-5" />
-                  <p>Ti aspettiamo il {selectedAppointment?.day} {selectedAppointment?.date} alle {selectedTime}</p>
+                  <span>Ti aspettiamo {confirmedAppointment?.day} {confirmedAppointment?.date} alle {confirmedAppointment?.time} in Via Ferruccio Pelli 14, Lugano.</span>
                 </div>
                 <a
-                  href={generateCalendarLink(selectedAppointment)}
+                  href={generateCalendarLink(confirmedAppointment)}
                   className="inline-block px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
-                  download="appuntamento-jc-nails.ics"
                 >
                   📅 Aggiungi al Calendario
                 </a>
@@ -556,6 +531,7 @@ END:VCALENDAR`;
                   setInstagram('');
                   setPhoneNumber('');
                   setServiceType(null);
+                  setConfirmedAppointment(null);
                 }}
               >
                 Chiudi
