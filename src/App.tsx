@@ -59,15 +59,17 @@ function App() {
       const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
       
       if (dayName === 'lunedì') {
-        appointments.push({
-          date: dateStr,
-          day: capitalizedDay,
-          time: '10:00',
-          clientName: null,
-          clientSurname: null,
-          phoneNumber: null,
-          instagram: null,
-          serviceType: null
+        ['10:00', '14:30', '17:00'].forEach(time => {
+          appointments.push({
+            date: dateStr,
+            day: capitalizedDay,
+            time: time,
+            clientName: null,
+            clientSurname: null,
+            phoneNumber: null,
+            instagram: null,
+            serviceType: null
+          });
         });
       } else if (['mercoledì', 'venerdì', 'sabato'].includes(dayName)) {
         appointments.push({
@@ -97,7 +99,20 @@ function App() {
     return appointments;
   };
 
-  const [appointments, setAppointments] = useState<Appointment[]>(generateAppointments(currentWeekStart));
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    // Carica gli appuntamenti dal localStorage all'avvio
+    const savedAppointments = localStorage.getItem('appointments');
+    if (savedAppointments) {
+      return JSON.parse(savedAppointments);
+    }
+    return generateAppointments(getInitialWeekStart());
+  });
+
+  // Salva gli appuntamenti nel localStorage ogni volta che cambiano
+  useEffect(() => {
+    localStorage.setItem('appointments', JSON.stringify(appointments));
+  }, [appointments]);
+
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [fullName, setFullName] = useState('');
   const [instagram, setInstagram] = useState('');
@@ -105,6 +120,7 @@ function App() {
   const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string>('10:00');
+  const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const today = new Date();
@@ -126,26 +142,28 @@ function App() {
   };
 
   const bookAppointment = () => {
-    if (selectedAppointment && fullName && phoneNumber && instagram && serviceType) {
+    if (selectedAppointment && fullName && phoneNumber && serviceType) {
       const [firstName, ...lastNameParts] = fullName.trim().split(' ');
       const lastName = lastNameParts.join(' ');
       
+      const updatedAppointment = {
+        ...selectedAppointment,
+        clientName: firstName,
+        clientSurname: lastName,
+        phoneNumber,
+        instagram: instagram || null,
+        serviceType
+      };
+      
       setAppointments(appointments.map(apt => 
-        apt.date === selectedAppointment.date
-          ? { 
-              ...apt, 
-              time: selectedTime,
-              clientName: firstName,
-              clientSurname: lastName,
-              phoneNumber,
-              instagram,
-              serviceType
-            }
+        apt.date === selectedAppointment.date && apt.time === selectedAppointment.time
+          ? updatedAppointment
           : apt
       ));
+      
+      setConfirmedAppointment(updatedAppointment);
       setSelectedAppointment(null);
       setShowSuccess(true);
-      setSelectedTime('10:00');
     }
   };
 
@@ -484,7 +502,7 @@ function App() {
       </footer>
 
       {/* Success Modal */}
-      {showSuccess && (
+      {showSuccess && confirmedAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <div className="text-center">
@@ -497,9 +515,8 @@ function App() {
                 Prenotazione Confermata!
               </h3>
               <div className="space-y-4 mt-6">
-                <div className="flex items-center justify-center gap-2 text-green-600">
-                  <Check className="w-5 h-5" />
-                  <p>Ti aspettiamo il {selectedAppointment?.day} {selectedAppointment?.date} alle {selectedTime}</p>
+                <div className="text-green-600 text-lg">
+                  <p>Ti aspettiamo il {confirmedAppointment.day.toLowerCase()} {confirmedAppointment.date} alle {confirmedAppointment.time} in Via F.Pelli 14</p>
                 </div>
                 <p className="text-gray-600">
                   Se hai ulteriori domande o chiarimenti contattaci:
@@ -527,6 +544,7 @@ function App() {
                 className="mt-6 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                 onClick={() => {
                   setShowSuccess(false);
+                  setConfirmedAppointment(null);
                   setFullName('');
                   setInstagram('');
                   setPhoneNumber('');
@@ -548,25 +566,7 @@ function App() {
               Prenota Appuntamento
             </h3>
             <p className="mb-4 text-gray-600">
-              {selectedAppointment.day} {selectedAppointment.date}
-              {selectedAppointment.day === 'Lunedì' ? (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Seleziona Orario:
-                  </label>
-                  <select
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full p-2 border border-pink-200 rounded-lg bg-white"
-                  >
-                    <option value="10:00">10:00</option>
-                    <option value="14:30">14:30</option>
-                    <option value="17:00">17:00</option>
-                  </select>
-                </div>
-              ) : (
-                ` alle ${selectedAppointment.time}`
-              )}
+              {selectedAppointment.day} {selectedAppointment.date} alle {selectedAppointment.time}
             </p>
             <div className="space-y-4">
               <input
@@ -630,7 +630,7 @@ function App() {
               <button
                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={bookAppointment}
-                disabled={!fullName || !phoneNumber || !instagram || !serviceType}
+                disabled={!fullName || !phoneNumber || !serviceType}
               >
                 Conferma
               </button>
