@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Phone, Sparkles, Shield, Instagram, UserX, Check, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Sparkles, Shield, Instagram, UserX, Check, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import Admin from './pages/Admin';
 import { Helmet } from 'react-helmet';
 
@@ -21,6 +21,7 @@ interface Service {
 
 function App() {
   const [isAdminView, setIsAdminView] = useState(false);
+  const [currentWeekStart, setCurrentWeekStart] = useState(new Date('2025-03-24'));
   const services: Service[] = [
     { name: "Semipermanente", price: "35 CHF" },
     { name: "Ricostruzione base", price: "60 CHF" },
@@ -35,8 +36,7 @@ function App() {
     { name: "Copertura in gel", price: "45 CHF" }
   ];
 
-  const generateAppointments = () => {
-    const baseDate = new Date('2025-03-24');
+  const generateAppointments = (baseDate: Date) => {
     const appointments: Appointment[] = [];
     
     for (let i = 0; i < 7; i++) {
@@ -47,17 +47,15 @@ function App() {
       const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
       
       if (dayName === 'lunedì') {
-        ['10:00', '14:30', '17:00'].forEach(time => {
-          appointments.push({
-            date: dateStr,
-            day: capitalizedDay,
-            time,
-            clientName: null,
-            clientSurname: null,
-            phoneNumber: null,
-            instagram: null,
-            serviceType: null
-          });
+        appointments.push({
+          date: dateStr,
+          day: capitalizedDay,
+          time: '10:00',
+          clientName: null,
+          clientSurname: null,
+          phoneNumber: null,
+          instagram: null,
+          serviceType: null
         });
       } else if (['mercoledì', 'venerdì', 'sabato'].includes(dayName)) {
         appointments.push({
@@ -87,13 +85,25 @@ function App() {
     return appointments;
   };
 
-  const [appointments, setAppointments] = useState<Appointment[]>(generateAppointments());
+  const [appointments, setAppointments] = useState<Appointment[]>(generateAppointments(currentWeekStart));
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [fullName, setFullName] = useState('');
   const [instagram, setInstagram] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<string>('10:00');
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentWeekStart);
+    if (direction === 'next') {
+      newDate.setDate(newDate.getDate() + 7);
+    } else {
+      newDate.setDate(newDate.getDate() - 7);
+    }
+    setCurrentWeekStart(newDate);
+    setAppointments(generateAppointments(newDate));
+  };
 
   const bookAppointment = () => {
     if (selectedAppointment && fullName && phoneNumber && instagram && serviceType) {
@@ -101,9 +111,10 @@ function App() {
       const lastName = lastNameParts.join(' ');
       
       setAppointments(appointments.map(apt => 
-        apt.date === selectedAppointment.date && apt.time === selectedAppointment.time
+        apt.date === selectedAppointment.date
           ? { 
               ...apt, 
+              time: selectedTime,
               clientName: firstName,
               clientSurname: lastName,
               phoneNumber,
@@ -114,6 +125,7 @@ function App() {
       ));
       setSelectedAppointment(null);
       setShowSuccess(true);
+      setSelectedTime('10:00');
     }
   };
 
@@ -131,6 +143,44 @@ function App() {
         ? newAppointment
         : apt
     ));
+  };
+
+  const generateCalendarLink = (appointment: Appointment | null) => {
+    if (!appointment) return '';
+    
+    const [day, month, year] = appointment.date.split('/');
+    const [hours, minutes] = appointment.time.split(':');
+    
+    // Creo la data di inizio
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+    // Aggiungo un'ora per la fine dell'appuntamento
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/-|:|\.\d+/g, '');
+    };
+    
+    const event = {
+      title: `Appuntamento JC Nails - ${serviceType} - ${appointment.date}`,
+      start: formatDate(startDate),
+      end: formatDate(endDate),
+      description: `Appuntamento per ${serviceType} da JC Nails Lugano\nInstagram: @jcnailslugano\nTel: 0766070544\n\nVia Ferruccio Pelli 14, 6° piano\n6900 Lugano`,
+      location: 'Via Ferruccio Pelli 14, 6900 Lugano, Svizzera',
+    };
+    
+    const calendarUrl = `data:text/calendar;charset=utf-8,BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+URL:https://jcnails.ch
+DTSTART:${event.start}
+DTEND:${event.end}
+SUMMARY:${event.title}
+DESCRIPTION:${event.description}
+LOCATION:${event.location}
+END:VEVENT
+END:VCALENDAR`;
+
+    return encodeURI(calendarUrl);
   };
 
   if (isAdminView) {
@@ -190,7 +240,7 @@ function App() {
             "description": "Centro professionale specializzato in ricostruzione unghie, semipermanente, nail art e trattamenti estetici a Lugano",
             "address": {
               "@type": "PostalAddress",
-              "streetAddress": "Via Lugano",
+              "streetAddress": "Via Ferruccio Pelli 14, 6° piano",
               "addressLocality": "Lugano",
               "addressRegion": "Ticino",
               "postalCode": "6900",
@@ -283,10 +333,33 @@ function App() {
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Appointments Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-semibold text-pink-800 mb-6 flex items-center gap-2">
-            <Calendar className="w-6 h-6" />
-            Disponibilità Appuntamenti
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold text-pink-800 flex items-center gap-2">
+              <Calendar className="w-6 h-6" />
+              Disponibilità Appuntamenti
+            </h2>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigateWeek('prev')}
+                className="p-2 rounded-full hover:bg-pink-100 transition-colors"
+                title="Settimana precedente"
+              >
+                <ChevronLeft className="w-6 h-6 text-pink-600" />
+              </button>
+              <span className="text-pink-800 font-medium">
+                {currentWeekStart.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {
+                  new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                }
+              </span>
+              <button
+                onClick={() => navigateWeek('next')}
+                className="p-2 rounded-full hover:bg-pink-100 transition-colors"
+                title="Settimana successiva"
+              >
+                <ChevronRight className="w-6 h-6 text-pink-600" />
+              </button>
+            </div>
+          </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {appointments
@@ -298,10 +371,21 @@ function App() {
                   onClick={() => setSelectedAppointment(apt)}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-pink-800">{apt.day} - {apt.date}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-pink-800">
+                        {apt.day} - {apt.date}
+                        {apt.day === 'Lunedì' && (
+                          <span className="ml-2 text-sm bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
+                            3 slot
+                          </span>
+                        )}
+                      </span>
+                    </div>
                     <Clock className="w-5 h-5 text-pink-600" />
                   </div>
-                  <div className="text-2xl font-bold text-pink-700">{apt.time}</div>
+                  <div className="text-2xl font-bold text-pink-700">
+                    {apt.day === 'Lunedì' ? 'Scegli orario' : apt.time}
+                  </div>
                 </div>
               ))}
           </div>
@@ -313,7 +397,7 @@ function App() {
             <Sparkles className="w-6 h-6" />
             Listino Prezzi
           </h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
             {services.map((service, index) => (
               <div 
                 key={index}
@@ -328,7 +412,7 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-t from-pink-100 to-pink-50 py-8 mt-8">
+      <footer className="bg-gradient-to-t from-pink-100 to-pink-50 py-12 mt-8 pb-24">
         <div className="container mx-auto px-4">
           <h3 className="text-xl font-semibold text-pink-800 mb-4 text-center">
             Policy del Salone
@@ -378,8 +462,15 @@ function App() {
               <div className="space-y-4 mt-6">
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <Check className="w-5 h-5" />
-                  <p>Ti aspettiamo il {selectedAppointment?.day} {selectedAppointment?.date} alle {selectedAppointment?.time}</p>
+                  <p>Ti aspettiamo il {selectedAppointment?.day} {selectedAppointment?.date} alle {selectedTime}</p>
                 </div>
+                <a
+                  href={generateCalendarLink(selectedAppointment)}
+                  className="inline-block px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                  download="appuntamento-jc-nails.ics"
+                >
+                  📅 Aggiungi al Calendario
+                </a>
                 <p className="text-gray-600">
                   Se hai ulteriori domande o chiarimenti contattaci:
                 </p>
@@ -427,7 +518,25 @@ function App() {
               Prenota Appuntamento
             </h3>
             <p className="mb-4 text-gray-600">
-              {selectedAppointment.day} {selectedAppointment.date} alle {selectedAppointment.time}
+              {selectedAppointment.day} {selectedAppointment.date}
+              {selectedAppointment.day === 'Lunedì' ? (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Seleziona Orario:
+                  </label>
+                  <select
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="w-full p-2 border border-pink-200 rounded-lg bg-white"
+                  >
+                    <option value="10:00">10:00</option>
+                    <option value="14:30">14:30</option>
+                    <option value="17:00">17:00</option>
+                  </select>
+                </div>
+              ) : (
+                ` alle ${selectedAppointment.time}`
+              )}
             </p>
             <div className="space-y-4">
               <input
