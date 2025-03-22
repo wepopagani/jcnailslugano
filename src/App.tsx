@@ -1,0 +1,402 @@
+import React, { useState } from 'react';
+import { Calendar, Clock, User, Phone, Sparkles, Shield, Instagram, UserX, Check, CheckCircle } from 'lucide-react';
+import Admin from './pages/Admin';
+
+interface Appointment {
+  date: string;
+  day: string;
+  time: string;
+  clientName: string | null;
+  clientSurname: string | null;
+  phoneNumber: string | null;
+  instagram: string | null;
+  serviceType: 'ricostruzione' | 'semipermanente' | 'refill' | 'copertura' | 'smontaggio' | null;
+}
+
+interface Service {
+  name: string;
+  price: string;
+}
+
+function App() {
+  const [isAdminView, setIsAdminView] = useState(false);
+  const services: Service[] = [
+    { name: "Semipermanente", price: "35 CHF" },
+    { name: "Ricostruzione base", price: "60 CHF" },
+    { name: "Ricostruzione M", price: "+5 CHF" },
+    { name: "Ricostruzione L", price: "+10 CHF" },
+    { name: "Ricostruzione XL", price: "+15 CHF" },
+    { name: "Smontaggio", price: "+10 CHF" },
+    { name: "Smontaggio completo", price: "20 CHF" },
+    { name: "French/babyboomer", price: "+10 CHF" },
+    { name: "Decorazioni, charm, brillantini", price: "+5 CHF" },
+    { name: "Refill", price: "50 CHF" },
+    { name: "Copertura in gel", price: "45 CHF" }
+  ];
+
+  const generateAppointments = () => {
+    const baseDate = new Date('2025-03-24');
+    const appointments: Appointment[] = [];
+    
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(baseDate);
+      currentDate.setDate(baseDate.getDate() + i);
+      const dayName = currentDate.toLocaleDateString('it-IT', { weekday: 'long' });
+      const dateStr = currentDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+      
+      if (dayName === 'lunedì') {
+        ['10:00', '14:30', '17:00'].forEach(time => {
+          appointments.push({
+            date: dateStr,
+            day: capitalizedDay,
+            time,
+            clientName: null,
+            clientSurname: null,
+            phoneNumber: null,
+            instagram: null,
+            serviceType: null
+          });
+        });
+      } else if (['mercoledì', 'venerdì', 'sabato'].includes(dayName)) {
+        appointments.push({
+          date: dateStr,
+          day: capitalizedDay,
+          time: '17:00',
+          clientName: null,
+          clientSurname: null,
+          phoneNumber: null,
+          instagram: null,
+          serviceType: null
+        });
+      } else if (dayName === 'domenica') {
+        appointments.push({
+          date: dateStr,
+          day: capitalizedDay,
+          time: '10:00',
+          clientName: null,
+          clientSurname: null,
+          phoneNumber: null,
+          instagram: null,
+          serviceType: null
+        });
+      }
+    }
+    
+    return appointments;
+  };
+
+  const [appointments, setAppointments] = useState<Appointment[]>(generateAppointments());
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const bookAppointment = () => {
+    if (selectedAppointment && fullName && phoneNumber && instagram && serviceType) {
+      const [firstName, ...lastNameParts] = fullName.trim().split(' ');
+      const lastName = lastNameParts.join(' ');
+      
+      setAppointments(appointments.map(apt => 
+        apt.date === selectedAppointment.date && apt.time === selectedAppointment.time
+          ? { 
+              ...apt, 
+              clientName: firstName,
+              clientSurname: lastName,
+              phoneNumber,
+              instagram,
+              serviceType
+            }
+          : apt
+      ));
+      setSelectedAppointment(null);
+      setShowSuccess(true);
+    }
+  };
+
+  const deleteAppointment = (appointmentToDelete: Appointment) => {
+    setAppointments(appointments.map(apt => 
+      apt.date === appointmentToDelete.date && apt.time === appointmentToDelete.time
+        ? { ...apt, clientName: null, clientSurname: null, phoneNumber: null, instagram: null, serviceType: null }
+        : apt
+    ));
+  };
+
+  const updateAppointment = (oldAppointment: Appointment, newAppointment: Appointment) => {
+    setAppointments(appointments.map(apt => 
+      apt.date === oldAppointment.date && apt.time === oldAppointment.time
+        ? newAppointment
+        : apt
+    ));
+  };
+
+  if (isAdminView) {
+    return <Admin 
+      appointments={appointments} 
+      onDeleteAppointment={deleteAppointment}
+      onUpdateAppointment={updateAppointment}
+    />;
+  }
+
+  return (
+    <div className="min-h-screen bg-pink-50">
+      {/* Header */}
+      <header className="bg-gradient-to-b from-pink-100 to-pink-50 shadow-md py-8">
+        <div className="text-center relative">
+          <button
+            onClick={() => setIsAdminView(true)}
+            className="absolute right-4 top-4 p-2 rounded-full hover:bg-pink-200 transition-colors"
+            title="Area Admin"
+          >
+            <Shield className="w-6 h-6 text-pink-800" />
+          </button>
+          <h1 className="font-serif italic">
+            <span className="block text-5xl md:text-6xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold mb-2">
+              JC
+            </span>
+            <span className="block text-4xl md:text-5xl bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent font-bold">
+              NAILS
+            </span>
+          </h1>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Appointments Section */}
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+          <h2 className="text-2xl font-semibold text-pink-800 mb-6 flex items-center gap-2">
+            <Calendar className="w-6 h-6" />
+            Disponibilità Appuntamenti
+          </h2>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {appointments
+              .filter(apt => !apt.clientName)
+              .map((apt, index) => (
+                <div 
+                  key={`${apt.date}-${apt.time}-${index}`}
+                  className="p-4 rounded-lg border bg-white border-pink-200 hover:border-pink-400 cursor-pointer"
+                  onClick={() => setSelectedAppointment(apt)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-pink-800">{apt.day} - {apt.date}</span>
+                    <Clock className="w-5 h-5 text-pink-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-pink-700">{apt.time}</div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Price List Section */}
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+          <h2 className="text-2xl font-semibold text-pink-800 mb-6 flex items-center gap-2">
+            <Sparkles className="w-6 h-6" />
+            Listino Prezzi
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {services.map((service, index) => (
+              <div 
+                key={index}
+                className="flex justify-between items-center p-3 border border-pink-100 rounded-lg hover:bg-pink-50 transition-colors"
+              >
+                <span className="text-pink-800">{service.name}</span>
+                <span className="font-semibold text-pink-700">{service.price}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gradient-to-t from-pink-100 to-pink-50 py-8 mt-8">
+        <div className="container mx-auto px-4">
+          <h3 className="text-xl font-semibold text-pink-800 mb-4 text-center">
+            Policy del Salone
+          </h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <div className="flex items-center justify-center mb-2 text-pink-600">
+                <Clock className="w-6 h-6" />
+              </div>
+              <p className="text-center text-gray-700">
+                Si prega di disdire con 24 ore di anticipo
+              </p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <div className="flex items-center justify-center mb-2 text-pink-600">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <p className="text-center text-gray-700">
+                Il prezzo del refill varia in base alla lunghezza
+              </p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <div className="flex items-center justify-center mb-2 text-pink-600">
+                <UserX className="w-6 h-6" />
+              </div>
+              <p className="text-center text-gray-700">
+                No Accompagnatori
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <CheckCircle className="w-12 h-12 text-green-500" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-semibold text-green-600 mb-2">
+                Prenotazione Confermata!
+              </h3>
+              <div className="space-y-4 mt-6">
+                <div className="flex items-center justify-center gap-2 text-green-600">
+                  <Check className="w-5 h-5" />
+                  <p>Ti aspettiamo il {selectedAppointment?.day} {selectedAppointment?.date} alle {selectedAppointment?.time}</p>
+                </div>
+                <p className="text-gray-600">
+                  Se hai ulteriori domande o chiarimenti contattaci:
+                </p>
+                <div className="flex items-center justify-center gap-6">
+                  <a 
+                    href="https://instagram.com/jcnailslugano" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-pink-600 hover:text-pink-700"
+                  >
+                    <Instagram className="w-5 h-5" />
+                    @jcnailslugano
+                  </a>
+                  <a 
+                    href="tel:0766070544"
+                    className="flex items-center gap-2 text-pink-600 hover:text-pink-700"
+                  >
+                    <Phone className="w-5 h-5" />
+                    0766070544
+                  </a>
+                </div>
+              </div>
+              <button
+                className="mt-6 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                onClick={() => {
+                  setShowSuccess(false);
+                  setFullName('');
+                  setInstagram('');
+                  setPhoneNumber('');
+                  setServiceType(null);
+                }}
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {selectedAppointment && !showSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-semibold text-pink-800 mb-4">
+              Prenota Appuntamento
+            </h3>
+            <p className="mb-4 text-gray-600">
+              {selectedAppointment.day} {selectedAppointment.date} alle {selectedAppointment.time}
+            </p>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Nome e Cognome"
+                className="w-full p-2 border border-pink-200 rounded-lg"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+              <div className="relative">
+                <span className="absolute left-2 top-2 text-gray-500">@</span>
+                <input
+                  type="text"
+                  placeholder="Instagram (facoltativo)"
+                  className="w-full p-2 pl-7 border border-pink-200 rounded-lg"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                />
+              </div>
+              <input
+                type="tel"
+                placeholder="Numero di Telefono"
+                className="w-full p-2 border border-pink-200 rounded-lg"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+              />
+              
+              <div className="space-y-2">
+                <p className="font-medium text-gray-700">Seleziona Servizio:</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { id: 'ricostruzione', label: 'Ricostruzione' },
+                    { id: 'semipermanente', label: 'Semipermanente' },
+                    { id: 'refill', label: 'Refill' },
+                    { id: 'copertura', label: 'Copertura in gel' },
+                    { id: 'smontaggio', label: 'Smontaggio' }
+                  ].map((service) => (
+                    <label
+                      key={service.id}
+                      className={`flex items-center p-2 rounded-lg border cursor-pointer transition-colors ${
+                        serviceType === service.id
+                          ? 'bg-pink-100 border-pink-400'
+                          : 'border-gray-200 hover:border-pink-200'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="service"
+                        value={service.id}
+                        checked={serviceType === service.id}
+                        onChange={(e) => setServiceType(e.target.value as Appointment['serviceType'])}
+                        className="hidden"
+                      />
+                      <span className="ml-2">{service.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button
+                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={bookAppointment}
+                disabled={!fullName || !phoneNumber || !instagram || !serviceType}
+              >
+                Conferma
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                onClick={() => {
+                  setSelectedAppointment(null);
+                  setFullName('');
+                  setInstagram('');
+                  setPhoneNumber('');
+                  setServiceType(null);
+                }}
+              >
+                Annulla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
