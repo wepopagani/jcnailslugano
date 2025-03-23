@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, Search, Trash2, LogOut, Instagram, Sparkles, Filter, Edit, X, ChevronLeft } from 'lucide-react';
 
 interface Appointment {
+  id?: string;
   date: string;
   day: string;
   time: string;
@@ -23,8 +24,16 @@ const EditModal: React.FC<EditModalProps> = ({ appointment, onSave, onClose }) =
   const [fullName, setFullName] = useState(`${appointment.clientName || ''} ${appointment.clientSurname || ''}`);
 
   const handleSave = () => {
-    const [firstName, ...lastNameParts] = fullName.trim().split(' ');
-    const lastName = lastNameParts.join(' ');
+    const nameParts = fullName.trim().split(' ');
+    let firstName = '';
+    let lastName = '';
+    
+    if (nameParts.length === 1) {
+      firstName = nameParts[0];
+    } else if (nameParts.length > 1) {
+      firstName = nameParts[0];
+      lastName = nameParts.slice(1).join(' ');
+    }
     
     onSave({
       ...editedAppointment,

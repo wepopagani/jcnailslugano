@@ -160,7 +160,14 @@ function App() {
     const newDate = new Date(currentWeekStart);
     if (direction === 'next') {
       newDate.setDate(newDate.getDate() + 7);
-      setCurrentWeekStart(newDate);
+      
+      // Limitare la navigazione a 60 giorni nel futuro
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + 60);
+      
+      if (newDate <= maxDate) {
+        setCurrentWeekStart(newDate);
+      }
     } else {
       newDate.setDate(newDate.getDate() - 7);
       if (newDate >= today) {
@@ -171,8 +178,16 @@ function App() {
 
   const bookAppointment = async () => {
     if (selectedAppointment && fullName && phoneNumber && serviceType) {
-      const [firstName, ...lastNameParts] = fullName.trim().split(' ');
-      const lastName = lastNameParts.join(' ');
+      const nameParts = fullName.trim().split(' ');
+      let firstName = '';
+      let lastName = '';
+      
+      if (nameParts.length === 1) {
+        firstName = nameParts[0];
+      } else if (nameParts.length > 1) {
+        firstName = nameParts[0];
+        lastName = nameParts.slice(1).join(' ');
+      }
       
       const updatedAppointment = {
         date: selectedAppointment.date,
@@ -428,9 +443,18 @@ function App() {
                 
                 {isWeekSelectorOpen && (
                   <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-pink-100 z-10">
-                    {[...Array(4)].map((_, index) => {
-                      const weekStart = new Date(currentWeekStart.getTime());
+                    {[...Array(8)].map((_, index) => {
+                      const weekStart = new Date(getInitialWeekStart().getTime());
                       weekStart.setDate(weekStart.getDate() + (index * 7));
+                      
+                      // Limitare a 60 giorni
+                      const maxDate = new Date();
+                      maxDate.setDate(maxDate.getDate() + 60);
+                      
+                      if (weekStart > maxDate) {
+                        return null;
+                      }
+                      
                       const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
                       
                       return (
@@ -438,7 +462,6 @@ function App() {
                           key={index}
                           onClick={() => {
                             setCurrentWeekStart(weekStart);
-                            setAppointments(generateAppointments(weekStart));
                             setIsWeekSelectorOpen(false);
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-pink-50 transition-colors first:rounded-t-lg last:rounded-b-lg"
@@ -448,7 +471,7 @@ function App() {
                           }
                         </button>
                       );
-                    })}
+                    }).filter(Boolean)}
                   </div>
                 )}
               </div>
