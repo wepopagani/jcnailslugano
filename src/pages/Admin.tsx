@@ -156,6 +156,7 @@ const Admin: React.FC<{
   const [error, setError] = useState('');
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [deletingAppointment, setDeletingAppointment] = useState<Appointment | null>(null);
+  const [showOnlyBooked, setShowOnlyBooked] = useState(true);
 
   const handleLogin = () => {
     // Password semplice per demo - in produzione usare un sistema più sicuro
@@ -195,6 +196,7 @@ const Admin: React.FC<{
   };
 
   const filteredAppointments = appointments
+    .filter(apt => showOnlyBooked ? apt.clientName !== null : true)
     .filter(apt => searchDate ? apt.date.includes(searchDate) : true)
     .filter(apt => filterService ? apt.serviceType === filterService : true)
     .sort((a, b) => {
@@ -305,6 +307,24 @@ const Admin: React.FC<{
               </select>
               <Filter className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             </div>
+            <button
+              onClick={() => setShowOnlyBooked(!showOnlyBooked)}
+              className={`p-2 rounded-lg flex items-center gap-2 ${
+                showOnlyBooked ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              <span className="hidden md:inline">{showOnlyBooked ? 'Solo prenotati' : 'Tutti gli slot'}</span>
+            </button>
+          </div>
+
+          <div className="mb-4 text-pink-800 font-medium flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            <span>
+              {showOnlyBooked 
+                ? `Appuntamenti prenotati: ${filteredAppointments.length}` 
+                : `Visualizzando ${filteredAppointments.length} slot (${appointments.filter(apt => apt.clientName !== null).length} prenotati)`}
+            </span>
           </div>
 
           <div className="overflow-x-auto">
