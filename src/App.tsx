@@ -112,19 +112,8 @@ function App() {
     const loadAppointments = async () => {
       try {
         const appointmentsRef = collection(db, 'appointments');
-        // Modifica la query per usare la data in formato stringa
-        const startDate = currentWeekStart.toLocaleDateString('it-IT', { 
-          day: '2-digit', 
-          month: '2-digit', 
-          year: 'numeric' 
-        });
-        
-        // Cache provvisoria per evitare flickering durante il caricamento
-        const temporaryAppointments = generateAppointments(currentWeekStart);
-        setAppointments(temporaryAppointments);
-        
-        const q = query(appointmentsRef, where('date', '>=', startDate));
-        const querySnapshot = await getDocs(q);
+        // Rimuovi il filtro per data, carica TUTTI gli appuntamenti
+        const querySnapshot = await getDocs(appointmentsRef);
         
         const loadedAppointments = querySnapshot.docs.map(doc => ({
           ...doc.data(),
@@ -133,9 +122,12 @@ function App() {
 
         console.log('Appuntamenti caricati da Firestore:', loadedAppointments.length);
 
-        // Combina gli appuntamenti generati con quelli caricati
+        // Genera gli slot disponibili
         const generatedAppointments = generateAppointments(currentWeekStart);
+        
+        // Importante: combina correttamente gli appuntamenti
         const mergedAppointments = generatedAppointments.map(genApt => {
+          // Cerca per data E ora esatta
           const existingApt = loadedAppointments.find(
             loadedApt => loadedApt.date === genApt.date && loadedApt.time === genApt.time
           );
@@ -145,27 +137,6 @@ function App() {
         setAppointments(mergedAppointments);
       } catch (error) {
         console.error('Errore nel caricamento degli appuntamenti:', error);
-        
-        // In caso di errore, mostriamo almeno gli appuntamenti generati
-        const fallbackAppointments = generateAppointments(currentWeekStart);
-        setAppointments(fallbackAppointments);
-        
-        // E verifichiamo se abbiamo appuntamenti in sessionStorage come fallback
-        try {
-          const savedAppointments = JSON.parse(sessionStorage.getItem('savedAppointments') || '[]') as Appointment[];
-          if (savedAppointments.length > 0) {
-            // Combina gli appuntamenti generati con quelli salvati localmente
-            const mergedAppointments = fallbackAppointments.map(genApt => {
-              const localApt = savedAppointments.find(
-                savedApt => savedApt.date === genApt.date && savedApt.time === genApt.time
-              );
-              return localApt || genApt;
-            });
-            setAppointments(mergedAppointments);
-          }
-        } catch (storageError) {
-          console.warn('Impossibile recuperare gli appuntamenti da sessionStorage:', storageError);
-        }
       }
     };
 
@@ -386,6 +357,9 @@ function App() {
       console.error('Errore nell\'aggiornamento dell\'appuntamento:', error);
     }
   };
+
+  console.log('Appuntamenti totali:', appointments.length);
+  console.log('Appuntamenti prenotati:', appointments.filter(apt => apt.clientName !== null).length);
 
   if (isAdminView) {
     return <Admin 
