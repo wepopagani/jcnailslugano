@@ -215,6 +215,7 @@ function App() {
   const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
+  const [isBookingInProgress, setIsBookingInProgress] = useState(false);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const today = new Date();
@@ -240,6 +241,10 @@ function App() {
   };
 
   const bookAppointment = async () => {
+    if (isBookingInProgress) return;
+    
+    setIsBookingInProgress(true);
+    
     if (selectedAppointment && fullName && phoneNumber && serviceType && email) {
       const nameParts = fullName.trim().split(' ');
       let firstName = '';
@@ -358,8 +363,10 @@ function App() {
       };
       
       // Avvia il processo di salvataggio con retry
-      saveWithRetry();
+      await saveWithRetry();
     }
+    
+    setIsBookingInProgress(false);
   };
 
   const deleteAppointment = async (appointmentToDelete: Appointment) => {
@@ -934,9 +941,9 @@ function App() {
               <button
                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={bookAppointment}
-                disabled={!fullName || !phoneNumber || !serviceType || !email}
+                disabled={!fullName || !phoneNumber || !serviceType || !email || isBookingInProgress}
               >
-                Conferma
+                {isBookingInProgress ? 'Prenotazione in corso...' : 'Conferma'}
               </button>
               <button
                 className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
