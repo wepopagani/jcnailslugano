@@ -128,7 +128,7 @@ const inviaEmailAppuntamento = async (appuntamento) => {
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f5d6e6; border-radius: 8px; background-color: #fff9fc;">
           <div style="text-align: center; margin-bottom: 20px;">
             <h1 style="color: #d4649a; font-size: 24px; margin: 0;">JC Nails</h1>
-            <p style="color: #a76b8f; margin: 5px 0 20px;">Beauty & Nail Art</p>
+            <p style="color: #a76b8f; margin: 5px 0 20px;"></p>
           </div>
           
           <div style="background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #f8e1ed; margin-bottom: 20px;">

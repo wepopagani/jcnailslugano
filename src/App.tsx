@@ -286,36 +286,53 @@ function App() {
               : apt
           ));
           
-          // Invia le email di conferma
-          try {
-            const emailData = {
-              clientName: firstName + (lastName ? ' ' + lastName : ''),
-              clientEmail: email,
-              phoneNumber,
-              instagram: instagram || 'Non specificato',
-              date: selectedAppointment.date,
-              day: selectedAppointment.day,
-              time: selectedAppointment.time,
-              serviceType: serviceType
-            };
-            
-            // Chiamata all'API per inviare le email
-            const response = await fetch('/api/send-confirmation-email', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(emailData),
-            });
-            
-            if (!response.ok) {
-              console.warn('Errore nell\'invio delle email di conferma');
-            } else {
-              console.log('Email di conferma inviate con successo');
-            }
-          } catch (emailError) {
-            // Non blocchiamo il flusso se l'invio dell'email fallisce
-            console.error('Errore nell\'invio delle email:', emailError);
+          // Creazione del link per Google Calendar
+          const appointmentDate = new Date(selectedAppointment.date.split('/').reverse().join('-') + 'T' + selectedAppointment.time);
+          const endDate = new Date(appointmentDate.getTime() + 60 * 60 * 1000); // Aggiungi 1 ora
+          
+          const start = appointmentDate.toISOString().replace(/-|:|\.\d+/g, '');
+          const end = endDate.toISOString().replace(/-|:|\.\d+/g, '');
+          
+          // Formatta il titolo e descrizione
+          const serviceTypeText = {
+            'ricostruzione': 'Ricostruzione unghie',
+            'semipermanente': 'Semipermanente',
+            'refill': 'Refill',
+            'copertura': 'Copertura in gel',
+            'smontaggio': 'Smontaggio'
+          };
+          
+          const title = `Appuntamento JC Nails - ${updatedAppointment.serviceType ? (serviceTypeText[updatedAppointment.serviceType as keyof typeof serviceTypeText] || updatedAppointment.serviceType) : 'Servizio'}`;
+          const location = "Via Ferruccio Pelli 14, 6° piano, citofono 'cito', Lugano";
+          const description = `Appuntamento per ${updatedAppointment.serviceType ? (serviceTypeText[updatedAppointment.serviceType as keyof typeof serviceTypeText] || updatedAppointment.serviceType) : 'servizio'} presso JC Nails Lugano.\n\nPer domande: 0766070544 o Instagram @jcnailslugano`;
+          
+          const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}&sf=true&output=xml`;
+          
+          const emailData = {
+            clientName: firstName + (lastName ? ' ' + lastName : ''),
+            clientEmail: email,
+            phoneNumber,
+            instagram: instagram || 'Non specificato',
+            date: selectedAppointment.date,
+            day: selectedAppointment.day,
+            time: selectedAppointment.time,
+            serviceType: serviceType,
+            calendarUrl: calendarUrl // Aggiungiamo l'URL del calendario ai dati dell'email
+          };
+          
+          // Chiamata all'API per inviare le email
+          const response = await fetch('/api/send-confirmation-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(emailData),
+          });
+          
+          if (!response.ok) {
+            console.warn('Errore nell\'invio delle email di conferma');
+          } else {
+            console.log('Email di conferma inviate con successo');
           }
           
           setConfirmedAppointment(appointmentWithId);
@@ -355,10 +372,12 @@ function App() {
               setSelectedAppointment(null);
               setShowSuccess(true);
             } catch (localError) {
-              alert('Si è verificato un errore durante il salvataggio dell\'appuntamento. Per favore, contatta direttamente il salone.');
+              alert('Si è verificato un errore durante il salvataggio dell\'appuntamento. Per favore contattaci al numero 0766070544 o via Instagram @jcnailslugano.');
             }
             return false;
           }
+        } finally {
+          setIsBookingInProgress(false);
         }
       };
       
@@ -474,6 +493,28 @@ function App() {
     }
   };
 
+  const generateCalendarUrl = (appointment: Appointment) => {
+    const appointmentDate = new Date(appointment.date.split('/').reverse().join('-') + 'T' + appointment.time);
+    const endDate = new Date(appointmentDate.getTime() + 60 * 60 * 1000); // 1 ora
+    
+    const start = appointmentDate.toISOString().replace(/-|:|\.\d+/g, '');
+    const end = endDate.toISOString().replace(/-|:|\.\d+/g, '');
+    
+    const serviceTypeText = {
+      'ricostruzione': 'Ricostruzione unghie',
+      'semipermanente': 'Semipermanente',
+      'refill': 'Refill',
+      'copertura': 'Copertura in gel',
+      'smontaggio': 'Smontaggio'
+    };
+    
+    const title = `Appuntamento JC Nails - ${appointment.serviceType ? (serviceTypeText[appointment.serviceType as keyof typeof serviceTypeText] || appointment.serviceType) : 'Servizio'}`;
+    const location = "Via Ferruccio Pelli 14, 6° piano, citofono 'cito', Lugano";
+    const description = `Appuntamento per ${appointment.serviceType ? (serviceTypeText[appointment.serviceType as keyof typeof serviceTypeText] || appointment.serviceType) : 'servizio'} presso JC Nails Lugano.\n\nPer domande: 0766070544 o Instagram @jcnailslugano`;
+    
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}&sf=true&output=xml`;
+  };
+
   console.log('Appuntamenti totali:', appointments.length);
   console.log('Appuntamenti prenotati:', appointments.filter(apt => apt.clientName !== null).length);
 
@@ -534,7 +575,7 @@ function App() {
             "description": "Centro professionale specializzato in ricostruzione unghie, semipermanente, nail art e trattamenti estetici a Lugano",
             "address": {
               "@type": "PostalAddress",
-              "streetAddress": "Via Ferruccio Pelli 14, 6° piano",
+              "streetAddress": "Via Ferruccio Pelli 14, 6° piano, citofono 'cito'",
               "addressLocality": "Lugano",
               "addressRegion": "Ticino",
               "postalCode": "6900",
@@ -818,8 +859,21 @@ function App() {
               </h3>
               <div className="space-y-4 mt-6">
                 <div className="text-green-600 text-lg">
-                  <p>Ti aspettiamo il {confirmedAppointment.day.toLowerCase()} {confirmedAppointment.date} alle {confirmedAppointment.time} in Via F.Pelli 14</p>
+                  <p>Ti aspettiamo il {confirmedAppointment.day.toLowerCase()} {confirmedAppointment.date} alle {confirmedAppointment.time} in Via F.Pelli 14, 6° piano, citofono 'cito'</p>
                 </div>
+                
+                {/* Aggiungi bottone calendario */}
+                <div className="mt-4">
+                  <a 
+                    href={generateCalendarUrl(confirmedAppointment)}
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-block px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Aggiungi al Calendario
+                  </a>
+                </div>
+                
                 <p className="text-gray-600">
                   Se hai ulteriori domande o chiarimenti contattaci:
                 </p>

@@ -212,7 +212,12 @@ const Admin: React.FC<{
     .filter(apt => searchDate ? apt.date.includes(searchDate) : true)
     .filter(apt => filterService ? apt.serviceType === filterService : true)
     .sort((a, b) => {
-      const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+      // Prima ordina per data
+      const dateA = a.date.split('/').reverse().join('-');
+      const dateB = b.date.split('/').reverse().join('-');
+      const dateComparison = new Date(dateA).getTime() - new Date(dateB).getTime();
+      
+      // Se la data è la stessa, ordina per ora
       if (dateComparison === 0) {
         return a.time.localeCompare(b.time);
       }
