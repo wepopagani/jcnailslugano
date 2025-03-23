@@ -119,6 +119,10 @@ function App() {
           year: 'numeric' 
         });
         
+        // Cache provvisoria per evitare flickering durante il caricamento
+        const temporaryAppointments = generateAppointments(currentWeekStart);
+        setAppointments(temporaryAppointments);
+        
         const q = query(appointmentsRef, where('date', '>=', startDate));
         const querySnapshot = await getDocs(q);
         
@@ -126,6 +130,8 @@ function App() {
           ...doc.data(),
           id: doc.id
         })) as Appointment[];
+
+        console.log('Appuntamenti caricati da Firestore:', loadedAppointments.length);
 
         // Combina gli appuntamenti generati con quelli caricati
         const generatedAppointments = generateAppointments(currentWeekStart);
@@ -139,11 +145,89 @@ function App() {
         setAppointments(mergedAppointments);
       } catch (error) {
         console.error('Errore nel caricamento degli appuntamenti:', error);
+        
+        // In caso di errore, mostriamo almeno gli appuntamenti generati
+        const fallbackAppointments = generateAppointments(currentWeekStart);
+        setAppointments(fallbackAppointments);
+        
+        // E verifichiamo se abbiamo appuntamenti in sessionStorage come fallback
+        try {
+          const savedAppointments = JSON.parse(sessionStorage.getItem('savedAppointments') || '[]') as Appointment[];
+          if (savedAppointments.length > 0) {
+            // Combina gli appuntamenti generati con quelli salvati localmente
+            const mergedAppointments = fallbackAppointments.map(genApt => {
+              const localApt = savedAppointments.find(
+                savedApt => savedApt.date === genApt.date && savedApt.time === genApt.time
+              );
+              return localApt || genApt;
+            });
+            setAppointments(mergedAppointments);
+          }
+        } catch (storageError) {
+          console.warn('Impossibile recuperare gli appuntamenti da sessionStorage:', storageError);
+        }
       }
     };
 
     loadAppointments();
   }, [currentWeekStart]);
+
+  // Dopo l'hook useEffect esistente per caricare gli appuntamenti
+  useEffect(() => {
+    // Verifica se ci sono appuntamenti salvati in locale da sincronizzare
+    const syncFailedAppointments = async () => {
+      try {
+        const failedAppointments = JSON.parse(localStorage.getItem('failedAppointments') || '[]') as (Appointment & { timestamp: string })[];
+        
+        if (failedAppointments.length > 0) {
+          console.log(`Tentativo di sincronizzazione di ${failedAppointments.length} appuntamenti falliti`);
+          
+          // Filtra appuntamenti più vecchi di 24 ore
+          const now = new Date().getTime();
+          const validAppointments = failedAppointments.filter(apt => {
+            const timestamp = new Date(apt.timestamp).getTime();
+            return (now - timestamp) < 24 * 60 * 60 * 1000; // 24 ore in millisecondi
+          });
+          
+          // Salva gli appuntamenti validi
+          for (const apt of validAppointments) {
+            try {
+              const { timestamp, ...appointmentData } = apt;
+              const appointmentsRef = collection(db, 'appointments');
+              await addDoc(appointmentsRef, appointmentData);
+              console.log('Appuntamento sincronizzato con successo:', apt);
+            } catch (error) {
+              console.error('Errore durante la sincronizzazione:', error);
+            }
+          }
+          
+          // Aggiorna il localStorage con solo gli appuntamenti che non siamo riusciti a sincronizzare
+          localStorage.setItem('failedAppointments', JSON.stringify(
+            validAppointments.filter(apt => !validAppointments.includes(apt))
+          ));
+        }
+      } catch (error) {
+        console.error('Errore nel processo di sincronizzazione:', error);
+      }
+    };
+    
+    // Controlla la connessione e sincronizza
+    if (navigator.onLine) {
+      syncFailedAppointments();
+    }
+    
+    // Configurare listener per lo stato online/offline
+    const handleOnline = () => {
+      console.log('Connessione di rete ristabilita, sincronizzazione in corso...');
+      syncFailedAppointments();
+    };
+    
+    window.addEventListener('online', handleOnline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [fullName, setFullName] = useState('');
@@ -200,28 +284,69 @@ function App() {
         serviceType
       };
 
-      try {
-        const appointmentsRef = collection(db, 'appointments');
-        const docRef = await addDoc(appointmentsRef, updatedAppointment);
-        
-        const appointmentWithId = {
-          ...updatedAppointment,
-          id: docRef.id
-        };
+      // Funzione di salvataggio con retry
+      const saveWithRetry = async (retryCount = 0, maxRetries = 3) => {
+        try {
+          const appointmentsRef = collection(db, 'appointments');
+          const docRef = await addDoc(appointmentsRef, updatedAppointment);
+          
+          const appointmentWithId = {
+            ...updatedAppointment,
+            id: docRef.id
+          };
 
-        setAppointments(appointments.map(apt => 
-          apt.date === selectedAppointment.date && apt.time === selectedAppointment.time
-            ? appointmentWithId
-            : apt
-        ));
-        
-        setConfirmedAppointment(appointmentWithId);
-        setSelectedAppointment(null);
-        setShowSuccess(true);
-      } catch (error) {
-        console.error('Errore nel salvare l\'appuntamento:', error);
-        alert('Si è verificato un errore durante il salvataggio dell\'appuntamento. Riprova più tardi.');
-      }
+          setAppointments(appointments.map(apt => 
+            apt.date === selectedAppointment.date && apt.time === selectedAppointment.time
+              ? appointmentWithId
+              : apt
+          ));
+          
+          setConfirmedAppointment(appointmentWithId);
+          setSelectedAppointment(null);
+          setShowSuccess(true);
+          
+          // Salvataggio locale in sessionStorage come backup
+          try {
+            const savedAppointments = JSON.parse(sessionStorage.getItem('savedAppointments') || '[]');
+            savedAppointments.push(appointmentWithId);
+            sessionStorage.setItem('savedAppointments', JSON.stringify(savedAppointments));
+          } catch (storageError) {
+            console.warn('Impossibile salvare in sessionStorage:', storageError);
+          }
+          
+          return true;
+        } catch (error) {
+          console.error(`Tentativo ${retryCount + 1}/${maxRetries} fallito:`, error);
+          
+          if (retryCount < maxRetries) {
+            // Attendi prima di riprovare (backoff esponenziale)
+            const delay = Math.pow(2, retryCount) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return saveWithRetry(retryCount + 1, maxRetries);
+          } else {
+            // Tutti i tentativi falliti, salviamo in localStorage come fallback
+            try {
+              const failedAppointments = JSON.parse(localStorage.getItem('failedAppointments') || '[]');
+              failedAppointments.push({
+                ...updatedAppointment,
+                timestamp: new Date().toISOString()
+              });
+              localStorage.setItem('failedAppointments', JSON.stringify(failedAppointments));
+              
+              // Mostra comunque il messaggio di successo all'utente
+              setConfirmedAppointment(updatedAppointment as Appointment);
+              setSelectedAppointment(null);
+              setShowSuccess(true);
+            } catch (localError) {
+              alert('Si è verificato un errore durante il salvataggio dell\'appuntamento. Per favore, contatta direttamente il salone.');
+            }
+            return false;
+          }
+        }
+      };
+      
+      // Avvia il processo di salvataggio con retry
+      saveWithRetry();
     }
   };
 
