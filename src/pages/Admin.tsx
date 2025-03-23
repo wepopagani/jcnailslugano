@@ -339,7 +339,8 @@ const Admin: React.FC<{
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Visualizzazione Desktop - visibile solo su schermi più grandi */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-pink-50">
@@ -408,6 +409,85 @@ const Admin: React.FC<{
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Visualizzazione Mobile - card con layout vertical */}
+          <div className="md:hidden space-y-4">
+            {filteredAppointments.map((apt, index) => (
+              <div 
+                key={`${apt.date}-${apt.time}-${index}`}
+                className="border border-pink-100 rounded-lg p-4 hover:bg-pink-50"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <div className="font-semibold text-pink-800">
+                    {apt.day} {apt.date} - {apt.time}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEdit(apt)}
+                      className="text-blue-500 hover:text-blue-700 p-1"
+                      title="Modifica"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    {apt.clientName && (
+                      <button
+                        onClick={() => handleDelete(apt)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                        title="Elimina"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {apt.clientName ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-1">
+                      <div className="text-gray-500">Cliente:</div>
+                      <div>{`${apt.clientName} ${apt.clientSurname}`}</div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-1">
+                      <div className="text-gray-500">Telefono:</div>
+                      <div>{apt.phoneNumber || '-'}</div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-1">
+                      <div className="text-gray-500">Servizio:</div>
+                      <div className={`${getServiceColor(apt.serviceType)}`}>
+                        {apt.serviceType ? (
+                          <div className="flex items-center gap-1">
+                            <Sparkles className="w-4 h-4" />
+                            {apt.serviceType.charAt(0).toUpperCase() + apt.serviceType.slice(1)}
+                          </div>
+                        ) : '-'}
+                      </div>
+                    </div>
+                    
+                    {apt.instagram && (
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="text-gray-500">Instagram:</div>
+                        <div className="flex items-center gap-1">
+                          <Instagram className="w-4 h-4" />
+                          @{apt.instagram}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {apt.clientEmail && (
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="text-gray-500">Email:</div>
+                        <div className="text-sm break-words">{apt.clientEmail}</div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 italic">Slot disponibile</div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
