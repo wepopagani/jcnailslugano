@@ -12,6 +12,7 @@ interface Appointment {
   time: string;
   clientName: string | null;
   clientSurname: string | null;
+  clientEmail: string | null;
   phoneNumber: string | null;
   instagram: string | null;
   serviceType: 'ricostruzione' | 'semipermanente' | 'refill' | 'copertura' | 'smontaggio' | null;
@@ -69,6 +70,7 @@ function App() {
             time: time,
             clientName: null,
             clientSurname: null,
+            clientEmail: null,
             phoneNumber: null,
             instagram: null,
             serviceType: null
@@ -81,6 +83,7 @@ function App() {
           time: '17:00',
           clientName: null,
           clientSurname: null,
+          clientEmail: null,
           phoneNumber: null,
           instagram: null,
           serviceType: null
@@ -92,6 +95,7 @@ function App() {
           time: '10:00',
           clientName: null,
           clientSurname: null,
+          clientEmail: null,
           phoneNumber: null,
           instagram: null,
           serviceType: null
@@ -112,7 +116,9 @@ function App() {
     const loadAppointments = async () => {
       try {
         const appointmentsRef = collection(db, 'appointments');
-        // Rimuovi il filtro per data, carica TUTTI gli appuntamenti
+        
+        // Se siamo in vista admin, carica tutti gli appuntamenti senza filtri
+        // altrimenti usa il filtro per settimana corrente
         const querySnapshot = await getDocs(appointmentsRef);
         
         const loadedAppointments = querySnapshot.docs.map(doc => ({
@@ -120,28 +126,29 @@ function App() {
           id: doc.id
         })) as Appointment[];
 
-        console.log('Appuntamenti caricati da Firestore:', loadedAppointments.length);
+        if (isAdminView) {
+          // In vista admin, usa tutti gli appuntamenti caricati
+          setAppointments(loadedAppointments);
+        } else {
+          // In vista cliente, filtra per la settimana corrente
+          const generatedAppointments = generateAppointments(currentWeekStart);
+          
+          const mergedAppointments = generatedAppointments.map(genApt => {
+            const existingApt = loadedAppointments.find(
+              loadedApt => loadedApt.date === genApt.date && loadedApt.time === genApt.time
+            );
+            return existingApt || genApt;
+          });
 
-        // Genera gli slot disponibili
-        const generatedAppointments = generateAppointments(currentWeekStart);
-        
-        // Importante: combina correttamente gli appuntamenti
-        const mergedAppointments = generatedAppointments.map(genApt => {
-          // Cerca per data E ora esatta
-          const existingApt = loadedAppointments.find(
-            loadedApt => loadedApt.date === genApt.date && loadedApt.time === genApt.time
-          );
-          return existingApt || genApt;
-        });
-
-        setAppointments(mergedAppointments);
+          setAppointments(mergedAppointments);
+        }
       } catch (error) {
         console.error('Errore nel caricamento degli appuntamenti:', error);
       }
     };
 
     loadAppointments();
-  }, [currentWeekStart]);
+  }, [currentWeekStart, isAdminView]); // Aggiungi isAdminView come dipendenza
 
   // Dopo l'hook useEffect esistente per caricare gli appuntamenti
   useEffect(() => {
@@ -204,6 +211,7 @@ function App() {
   const [fullName, setFullName] = useState('');
   const [instagram, setInstagram] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [serviceType, setServiceType] = useState<Appointment['serviceType']>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
@@ -232,7 +240,7 @@ function App() {
   };
 
   const bookAppointment = async () => {
-    if (selectedAppointment && fullName && phoneNumber && serviceType) {
+    if (selectedAppointment && fullName && phoneNumber && serviceType && email) {
       const nameParts = fullName.trim().split(' ');
       let firstName = '';
       let lastName = '';
@@ -250,6 +258,7 @@ function App() {
         time: selectedAppointment.time,
         clientName: firstName,
         clientSurname: lastName,
+        clientEmail: email,
         phoneNumber,
         instagram: instagram || null,
         serviceType
@@ -271,6 +280,38 @@ function App() {
               ? appointmentWithId
               : apt
           ));
+          
+          // Invia le email di conferma
+          try {
+            const emailData = {
+              clientName: firstName + (lastName ? ' ' + lastName : ''),
+              clientEmail: email,
+              phoneNumber,
+              instagram: instagram || 'Non specificato',
+              date: selectedAppointment.date,
+              day: selectedAppointment.day,
+              time: selectedAppointment.time,
+              serviceType: serviceType
+            };
+            
+            // Chiamata all'API per inviare le email
+            const response = await fetch('/api/send-confirmation-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(emailData),
+            });
+            
+            if (!response.ok) {
+              console.warn('Errore nell\'invio delle email di conferma');
+            } else {
+              console.log('Email di conferma inviate con successo');
+            }
+          } catch (emailError) {
+            // Non blocchiamo il flusso se l'invio dell'email fallisce
+            console.error('Errore nell\'invio delle email:', emailError);
+          }
           
           setConfirmedAppointment(appointmentWithId);
           setSelectedAppointment(null);
@@ -326,12 +367,43 @@ function App() {
       if ('id' in appointmentToDelete && appointmentToDelete.id) {
         const appointmentRef = doc(db, 'appointments', appointmentToDelete.id);
         await deleteDoc(appointmentRef);
+        
+        // Invia email di notifica per la cancellazione
+        if (appointmentToDelete.clientEmail) {
+          try {
+            // Dati per l'email
+            const emailData = {
+              type: 'cancel',
+              clientName: `${appointmentToDelete.clientName} ${appointmentToDelete.clientSurname}`,
+              clientEmail: appointmentToDelete.clientEmail,
+              phoneNumber: appointmentToDelete.phoneNumber,
+              instagram: appointmentToDelete.instagram,
+              date: appointmentToDelete.date,
+              day: appointmentToDelete.day,
+              time: appointmentToDelete.time,
+              serviceType: appointmentToDelete.serviceType
+            };
+            
+            // Chiamata all'API per inviare le email
+            await fetch('/api/send-confirmation-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(emailData),
+            });
+            
+            console.log('Email di cancellazione inviate con successo');
+          } catch (emailError) {
+            console.error('Errore nell\'invio delle email di cancellazione:', emailError);
+          }
+        }
       }
 
       // Aggiorna lo stato locale
       setAppointments(appointments.map(apt => 
         apt.date === appointmentToDelete.date && apt.time === appointmentToDelete.time
-          ? { ...apt, clientName: null, clientSurname: null, phoneNumber: null, instagram: null, serviceType: null }
+          ? { ...apt, clientName: null, clientSurname: null, clientEmail: null, phoneNumber: null, instagram: null, serviceType: null }
           : apt
       ));
     } catch (error) {
@@ -346,6 +418,43 @@ function App() {
         // Rimuoviamo l'id prima di inviare l'aggiornamento
         const { id, ...appointmentWithoutId } = newAppointment;
         await updateDoc(appointmentRef, appointmentWithoutId);
+
+        // Invia email di notifica per la modifica
+        if (oldAppointment.clientEmail) {
+          try {
+            // Dati per l'email
+            const emailData = {
+              type: 'update',
+              clientName: `${newAppointment.clientName} ${newAppointment.clientSurname}`,
+              clientEmail: newAppointment.clientEmail,
+              phoneNumber: newAppointment.phoneNumber,
+              instagram: newAppointment.instagram,
+              // Dati nuovi
+              date: newAppointment.date,
+              day: newAppointment.day,
+              time: newAppointment.time,
+              serviceType: newAppointment.serviceType,
+              // Dati precedenti
+              oldDate: oldAppointment.date,
+              oldDay: oldAppointment.day,
+              oldTime: oldAppointment.time,
+              oldServiceType: oldAppointment.serviceType
+            };
+            
+            // Chiamata all'API per inviare le email
+            await fetch('/api/send-confirmation-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(emailData),
+            });
+            
+            console.log('Email di modifica inviate con successo');
+          } catch (emailError) {
+            console.error('Errore nell\'invio delle email di modifica:', emailError);
+          }
+        }
       }
 
       setAppointments(appointments.map(apt => 
@@ -734,6 +843,7 @@ function App() {
                   setFullName('');
                   setInstagram('');
                   setPhoneNumber('');
+                  setEmail('');
                   setServiceType(null);
                 }}
               >
@@ -761,6 +871,14 @@ function App() {
                 className="w-full p-2 border border-pink-200 rounded-lg"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+              />
+              <input
+                type="email"
+                placeholder="Email (per conferma appuntamento)"
+                className="w-full p-2 border border-pink-200 rounded-lg"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
               <div className="relative">
                 <span className="absolute left-2 top-2 text-gray-500">@</span>
@@ -816,7 +934,7 @@ function App() {
               <button
                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={bookAppointment}
-                disabled={!fullName || !phoneNumber || !serviceType}
+                disabled={!fullName || !phoneNumber || !serviceType || !email}
               >
                 Conferma
               </button>
@@ -827,6 +945,7 @@ function App() {
                   setFullName('');
                   setInstagram('');
                   setPhoneNumber('');
+                  setEmail('');
                   setServiceType(null);
                 }}
               >

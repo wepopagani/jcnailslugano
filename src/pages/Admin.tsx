@@ -8,6 +8,7 @@ interface Appointment {
   time: string;
   clientName: string | null;
   clientSurname: string | null;
+  clientEmail: string | null;
   phoneNumber: string | null;
   instagram: string | null;
   serviceType: 'ricostruzione' | 'semipermanente' | 'refill' | 'copertura' | 'smontaggio' | null;
@@ -22,6 +23,7 @@ interface EditModalProps {
 const EditModal: React.FC<EditModalProps> = ({ appointment, onSave, onClose }) => {
   const [editedAppointment, setEditedAppointment] = useState(appointment);
   const [fullName, setFullName] = useState(`${appointment.clientName || ''} ${appointment.clientSurname || ''}`);
+  const [email, setEmail] = useState(appointment.clientEmail || '');
 
   const handleSave = () => {
     const nameParts = fullName.trim().split(' ');
@@ -38,7 +40,8 @@ const EditModal: React.FC<EditModalProps> = ({ appointment, onSave, onClose }) =
     onSave({
       ...editedAppointment,
       clientName: firstName || null,
-      clientSurname: lastName || null
+      clientSurname: lastName || null,
+      clientEmail: email || null
     });
   };
 
@@ -79,6 +82,15 @@ const EditModal: React.FC<EditModalProps> = ({ appointment, onSave, onClose }) =
               className="w-full p-2 border border-pink-200 rounded-lg"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              className="w-full p-2 border border-pink-200 rounded-lg"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div>
@@ -335,6 +347,7 @@ const Admin: React.FC<{
                   <th className="px-4 py-2 text-left text-pink-800">Giorno</th>
                   <th className="px-4 py-2 text-left text-pink-800">Ora</th>
                   <th className="px-4 py-2 text-left text-pink-800">Cliente</th>
+                  <th className="px-4 py-2 text-left text-pink-800">Email</th>
                   <th className="px-4 py-2 text-left text-pink-800">Instagram</th>
                   <th className="px-4 py-2 text-left text-pink-800">Telefono</th>
                   <th className="px-4 py-2 text-left text-pink-800">Servizio</th>
@@ -353,6 +366,7 @@ const Admin: React.FC<{
                     <td className="px-4 py-2">
                       {apt.clientName ? `${apt.clientName} ${apt.clientSurname}` : '-'}
                     </td>
+                    <td className="px-4 py-2">{apt.clientEmail || '-'}</td>
                     <td className="px-4 py-2">
                       {apt.instagram ? (
                         <div className="flex items-center gap-1">
