@@ -54,7 +54,7 @@ const testEmailAdmin = async () => {
         name: 'JC Nails', 
         address: process.env.EMAIL_USER
       },
-      to: 'wepo.pagani10@gmail.com',
+      to: 'jaclin2704@gmail.com',
       subject: 'Nuovo appuntamento prenotato',
       html: `
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f5d6e6; border-radius: 8px; background-color: #fff9fc;">
@@ -176,7 +176,7 @@ const inviaEmailAppuntamento = async (appuntamento) => {
         name: 'Sistema Appuntamenti JC Nails', 
         address: process.env.EMAIL_USER
       },
-      to: 'wepo.pagani10@gmail.com',
+      to: 'jaclin2704@gmail.com',
       subject: 'Nuovo appuntamento prenotato',
       html: `
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f5d6e6; border-radius: 8px; background-color: #fff9fc;">
