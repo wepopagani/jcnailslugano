@@ -245,7 +245,7 @@ function App() {
     
     setIsBookingInProgress(true);
     
-    if (selectedAppointment && fullName && phoneNumber && serviceType && email) {
+    if (selectedAppointment && fullName && phoneNumber && serviceType && instagram) {
       const nameParts = fullName.trim().split(' ');
       let firstName = '';
       let lastName = '';
@@ -860,18 +860,7 @@ function App() {
               <div className="space-y-4 mt-6">
                 <div className="text-green-600 text-lg">
                   <p>Ti aspettiamo il {confirmedAppointment.day.toLowerCase()} {confirmedAppointment.date} alle {confirmedAppointment.time} in Via F.Pelli 14, 6° piano, citofono 'cito'</p>
-                </div>
-                
-                {/* Aggiungi bottone calendario */}
-                <div className="mt-4">
-                  <a 
-                    href={generateCalendarUrl(confirmedAppointment)}
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="inline-block px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                  >
-                    Aggiungi al Calendario
-                  </a>
+                  <p className="mt-2 text-sm">Ti avviseremo il giorno prima su Instagram</p>
                 </div>
                 
                 <p className="text-gray-600">
@@ -935,20 +924,20 @@ function App() {
               />
               <input
                 type="email"
-                placeholder="Email (per conferma appuntamento)"
+                placeholder="Email (facoltativo)"
                 className="w-full p-2 border border-pink-200 rounded-lg"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
               <div className="relative">
                 <span className="absolute left-2 top-2 text-gray-500">@</span>
                 <input
                   type="text"
-                  placeholder="Instagram (facoltativo)"
+                  placeholder="Instagram (obbligatorio)"
                   className="w-full p-2 pl-7 border border-pink-200 rounded-lg"
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
+                  required
                 />
               </div>
               <input
@@ -995,7 +984,7 @@ function App() {
               <button
                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={bookAppointment}
-                disabled={!fullName || !phoneNumber || !serviceType || !email || isBookingInProgress}
+                disabled={!fullName || !phoneNumber || !serviceType || !instagram || isBookingInProgress}
               >
                 {isBookingInProgress ? 'Prenotazione in corso...' : 'Conferma'}
               </button>
