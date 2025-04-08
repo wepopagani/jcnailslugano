@@ -26,13 +26,15 @@ interface Service {
 function App() {
   const [isAdminView, setIsAdminView] = useState(false);
   
-  // Imposto la data di inizio alla prossima settimana
   const getInitialWeekStart = () => {
     const today = new Date();
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday;
+    const currentWeekStart = new Date(today);
+    // Troviamo l'inizio della settimana corrente (lunedì)
+    const dayOfWeek = currentWeekStart.getDay(); // 0 = domenica, 1 = lunedì, ...
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Se è domenica, torniamo indietro di 6 giorni
+    currentWeekStart.setDate(today.getDate() + diffToMonday);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    return currentWeekStart;
   };
 
   const [currentWeekStart, setCurrentWeekStart] = useState(getInitialWeekStart());
@@ -218,9 +220,6 @@ function App() {
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
     const newDate = new Date(currentWeekStart);
     if (direction === 'next') {
       newDate.setDate(newDate.getDate() + 7);
@@ -233,9 +232,26 @@ function App() {
         setCurrentWeekStart(newDate);
       }
     } else {
+      // Andiamo alla settimana precedente, ma non più indietro di oggi
       newDate.setDate(newDate.getDate() - 7);
-      if (newDate >= today) {
+      
+      // Consenti di vedere qualsiasi periodo (anche passato) solo se siamo in vista admin
+      if (isAdminView) {
         setCurrentWeekStart(newDate);
+      } else {
+        // Per l'utente normale, impedisci di navigare prima di oggi
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Se la settimana inizia almeno oggi, consenti di navigare indietro
+        const mondayOfThisWeek = new Date(today);
+        const dayOfWeek = today.getDay();
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        mondayOfThisWeek.setDate(today.getDate() + diffToMonday);
+        
+        if (newDate >= mondayOfThisWeek) {
+          setCurrentWeekStart(newDate);
+        }
       }
     }
   };
