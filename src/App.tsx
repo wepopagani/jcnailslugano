@@ -42,9 +42,10 @@ function App() {
   const services: Service[] = [
     { name: "Semipermanente", price: "40 CHF" },
     { name: "Ricostruzione base", price: "60 CHF" },
-    { name: "Ricostruzione M", price: "+5 CHF" },
-    { name: "Ricostruzione L", price: "+10 CHF" },
-    { name: "Ricostruzione XL", price: "+15 CHF" },
+    { name: "Ricostruzione S", price: "+5 CHF" },
+    { name: "Ricostruzione M", price: "+10 CHF" },
+    { name: "Ricostruzione L", price: "+15 CHF" },
+    { name: "Ricostruzione XL", price: "+20 CHF" },
     { name: "Refill", price: "50 CHF" },
     { name: "Copertura in gel", price: "50 CHF" },
     { name: "Smontaggio", price: "+10 CHF" },
@@ -209,6 +210,32 @@ function App() {
     };
   }, []);
 
+  // Controlla se ci sono appuntamenti disponibili nella settimana corrente
+  // Se non ce ne sono, passa automaticamente alla settimana successiva
+  useEffect(() => {
+    if (!isAdminView) {
+      const now = new Date();
+      
+      // Filtra appuntamenti futuri e disponibili
+      const availableAppointments = appointments.filter(apt => {
+        // Converti data e ora dell'appuntamento in oggetto Date
+        const [day, month, year] = apt.date.split('/').map(Number);
+        const [hours, minutes] = apt.time.split(':').map(Number);
+        const appointmentDate = new Date(year, month - 1, day, hours, minutes);
+        
+        // Consideralo disponibile solo se è nel futuro e non ha un cliente
+        return appointmentDate > now && apt.clientName === null;
+      });
+      
+      // Se non ci sono appuntamenti disponibili in questa settimana, passa alla prossima
+      if (availableAppointments.length === 0 && appointments.length > 0) {
+        const newWeekStart = new Date(currentWeekStart);
+        newWeekStart.setDate(newWeekStart.getDate() + 7);
+        setCurrentWeekStart(newWeekStart);
+      }
+    }
+  }, [appointments, currentWeekStart, isAdminView]);
+
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [fullName, setFullName] = useState('');
   const [instagram, setInstagram] = useState('');
@@ -279,7 +306,7 @@ function App() {
         time: selectedAppointment.time,
         clientName: firstName,
         clientSurname: lastName,
-        clientEmail: email,
+        clientEmail: null,
         phoneNumber,
         instagram: instagram || null,
         serviceType
@@ -326,7 +353,7 @@ function App() {
           
           const emailData = {
             clientName: firstName + (lastName ? ' ' + lastName : ''),
-            clientEmail: email,
+            clientEmail: null,
             phoneNumber,
             instagram: instagram || 'Non specificato',
             date: selectedAppointment.date,
@@ -759,7 +786,17 @@ function App() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {appointments
-              .filter(apt => !apt.clientName)
+              .filter(apt => {
+                // Filtra solo appuntamenti futuri e disponibili
+                if (apt.clientName !== null) return false;
+                
+                const [day, month, year] = apt.date.split('/').map(Number);
+                const [hours, minutes] = apt.time.split(':').map(Number);
+                const appointmentDate = new Date(year, month - 1, day, hours, minutes);
+                
+                // Mantieni solo gli appuntamenti futuri
+                return appointmentDate > new Date();
+              })
               .map((apt, index) => (
                 <div 
                   key={`${apt.date}-${apt.time}-${index}`}
@@ -945,13 +982,6 @@ function App() {
                 className="w-full p-2 border border-pink-200 rounded-lg"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-              />
-              <input
-                type="email"
-                placeholder="Email (facoltativo)"
-                className="w-full p-2 border border-pink-200 rounded-lg"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
               />
               <div className="relative">
                 <span className="absolute left-2 top-2 text-gray-500">@</span>
