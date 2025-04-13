@@ -42,9 +42,9 @@ function App() {
   const services: Service[] = [
     { name: "Semipermanente", price: "40 CHF" },
     { name: "Ricostruzione base", price: "60 CHF" },
-    { name: "Ricostruzione M", price: "+5 CHF" },
-    { name: "Ricostruzione L", price: "+10 CHF" },
-    { name: "Ricostruzione M", price: "+15 CHF" },
+    { name: "Ricostruzione S", price: "+5 CHF" },
+    { name: "Ricostruzione M", price: "+10 CHF" },
+    { name: "Ricostruzione L", price: "+15 CHF" },
     { name: "Ricostruzione XL", price: "+20 CHF" },
     { name: "Refill", price: "50 CHF" },
     { name: "Copertura in gel", price: "50 CHF" },
@@ -829,7 +829,7 @@ function App() {
                 <CreditCard className="w-6 h-6" />
               </div>
               <p className="text-gray-700">
-                Pagamento accettato: <br /> Contanti o Twint; <br /> No carta di credito
+                Metodo di pagamento accettato: <br /> Contanti o Twint; <br /> No carta di credito
               </p>
             </div>
           <div className="space-y-4">
