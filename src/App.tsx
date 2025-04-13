@@ -26,38 +26,6 @@ interface Service {
 function App() {
   const [isAdminView, setIsAdminView] = useState(false);
   
-  const getInitialWeekStart = () => {
-    const today = new Date();
-    const currentWeekStart = new Date(today);
-    // Troviamo l'inizio della settimana corrente (lunedì)
-    const dayOfWeek = currentWeekStart.getDay(); // 0 = domenica, 1 = lunedì, ...
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Se è domenica, torniamo indietro di 6 giorni
-    currentWeekStart.setDate(today.getDate() + diffToMonday);
-    currentWeekStart.setHours(0, 0, 0, 0);
-    return currentWeekStart;
-  };
-
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
-    const initialWeekStart = getInitialWeekStart();
-    return findNextAvailableWeek(initialWeekStart);
-  });
-  const [isWeekSelectorOpen, setIsWeekSelectorOpen] = useState(false);
-  const services: Service[] = [
-    { name: "Semipermanente", price: "40 CHF" },
-    { name: "Ricostruzione base", price: "60 CHF" },
-    { name: "Ricostruzione S", price: "+5 CHF" },
-    { name: "Ricostruzione M", price: "+10 CHF" },
-    { name: "Ricostruzione L", price: "+15 CHF" },
-    { name: "Ricostruzione XL", price: "+20 CHF" },
-    { name: "Refill", price: "50 CHF" },
-    { name: "Copertura in gel", price: "50 CHF" },
-    { name: "Smontaggio", price: "+10 CHF" },
-    { name: "Smontaggio completo", price: "20 CHF" },
-    { name: "French/babyboomer", price: "+10 CHF" },
-    { name: "Decorazioni, charm, brillantini", price: "+5 CHF" },
-
-  ];
-
   // Aggiungo una funzione per verificare se un appuntamento è già passato
   const isAppointmentPassed = (dateOrAppointment: string | Appointment, time?: string) => {
     let date: string;
@@ -77,6 +45,17 @@ function App() {
     
     const appointmentDate = new Date(year, month - 1, day, hours, minutes);
     return appointmentDate < now;
+  };
+  
+  const getInitialWeekStart = () => {
+    const today = new Date();
+    const currentWeekStart = new Date(today);
+    // Troviamo l'inizio della settimana corrente (lunedì)
+    const dayOfWeek = currentWeekStart.getDay(); // 0 = domenica, 1 = lunedì, ...
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Se è domenica, torniamo indietro di 6 giorni
+    currentWeekStart.setDate(today.getDate() + diffToMonday);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    return currentWeekStart;
   };
 
   // Modifico la funzione per generare gli appuntamenti includendo il controllo del tempo passato
@@ -148,15 +127,38 @@ function App() {
     const maxWeeks = 60; // Limite massimo di settimane future da controllare
     let currentDate = new Date(startDate);
     
-    for (let i = 0; i < maxWeeks; i++) {
-      // Se cerchiamo in avanti, aggiungiamo 7 giorni, altrimenti sottraiamo
+    // Se andiamo avanti, partiamo dalla settimana successiva
+    if (forward) {
+      currentDate.setDate(currentDate.getDate() + 7);
+    } else {
+      // Se andiamo indietro, partiamo dalla settimana precedente
+      currentDate.setDate(currentDate.getDate() - 7);
+      
+      // Non andare prima della settimana attuale
+      const today = new Date();
+      const mondayOfThisWeek = new Date(today);
+      const dayOfWeek = today.getDay();
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      mondayOfThisWeek.setDate(today.getDate() + diffToMonday);
+      
+      if (currentDate < mondayOfThisWeek && !isAdminView) {
+        return mondayOfThisWeek;
+      }
+    }
+    
+    // Prima controlliamo se la settimana corrente ha appuntamenti
+    const appointments = generateAppointments(currentDate);
+    if (appointments.length > 0) {
+      return currentDate;
+    }
+    
+    // Altrimenti cerchiamo altre settimane
+    for (let i = 1; i < maxWeeks; i++) {
+      const testDate = new Date(currentDate);
       if (forward) {
-        currentDate.setDate(currentDate.getDate() + (i === 0 ? 0 : 7));
+        testDate.setDate(testDate.getDate() + (i * 7));
       } else {
-        // Per la ricerca all'indietro, assicuriamoci di non andare prima di oggi
-        if (i > 0) {
-          currentDate.setDate(currentDate.getDate() - 7);
-        }
+        testDate.setDate(testDate.getDate() - (i * 7));
         
         // Non andare prima della settimana attuale
         const today = new Date();
@@ -165,21 +167,43 @@ function App() {
         const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
         mondayOfThisWeek.setDate(today.getDate() + diffToMonday);
         
-        if (currentDate < mondayOfThisWeek) {
-          return mondayOfThisWeek;
+        if (testDate < mondayOfThisWeek && !isAdminView) {
+          continue; // Salta questa iterazione e vai alla successiva
         }
       }
       
       // Verifica se questa settimana ha appuntamenti disponibili
-      const appointments = generateAppointments(currentDate);
+      const appointments = generateAppointments(testDate);
       if (appointments.length > 0) {
-        return currentDate;
+        return testDate;
       }
     }
     
     // Se non troviamo settimane future disponibili, torniamo alla data originale
     return startDate;
   };
+
+  // All'inizializzazione, assicuriamoci di iniziare da una settimana con appuntamenti disponibili
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const initialWeekStart = getInitialWeekStart();
+    return findNextAvailableWeek(initialWeekStart);
+  });
+  const [isWeekSelectorOpen, setIsWeekSelectorOpen] = useState(false);
+  const services: Service[] = [
+    { name: "Semipermanente", price: "40 CHF" },
+    { name: "Ricostruzione base", price: "60 CHF" },
+    { name: "Ricostruzione S", price: "+5 CHF" },
+    { name: "Ricostruzione M", price: "+10 CHF" },
+    { name: "Ricostruzione L", price: "+15 CHF" },
+    { name: "Ricostruzione XL", price: "+20 CHF" },
+    { name: "Refill", price: "50 CHF" },
+    { name: "Copertura in gel", price: "50 CHF" },
+    { name: "Smontaggio", price: "+10 CHF" },
+    { name: "Smontaggio completo", price: "20 CHF" },
+    { name: "French/babyboomer", price: "+10 CHF" },
+    { name: "Decorazioni, charm, brillantini", price: "+5 CHF" },
+
+  ];
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     // Inizializziamo con gli appuntamenti generati
@@ -249,6 +273,10 @@ function App() {
         }
       } catch (error) {
         console.error('Errore nel caricamento degli appuntamenti:', error);
+        // In caso di errore generale, usa gli appuntamenti generati localmente
+        const generatedAppointments = generateAppointments(currentWeekStart)
+          .filter(apt => !isAppointmentPassed(apt));
+        setAppointments(generatedAppointments);
       }
     };
 
@@ -341,24 +369,8 @@ function App() {
       // Trova la settimana precedente disponibile
       const prevAvailableWeek = findNextAvailableWeek(newDate, false);
       
-      // Consenti di vedere qualsiasi periodo (anche passato) solo se siamo in vista admin
-      if (isAdminView) {
-        setCurrentWeekStart(prevAvailableWeek);
-      } else {
-        // Per l'utente normale, impedisci di navigare prima di oggi
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Se la settimana inizia almeno oggi, consenti di navigare indietro
-        const mondayOfThisWeek = new Date(today);
-        const dayOfWeek = today.getDay();
-        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        mondayOfThisWeek.setDate(today.getDate() + diffToMonday);
-        
-        if (prevAvailableWeek >= mondayOfThisWeek) {
-          setCurrentWeekStart(prevAvailableWeek);
-        }
-      }
+      // Usa la settimana precedente trovata
+      setCurrentWeekStart(prevAvailableWeek);
     }
   };
 
@@ -443,18 +455,22 @@ function App() {
           };
           
           // Chiamata all'API per inviare le email
-          const response = await fetch('/api/send-confirmation-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(emailData),
-          });
-          
-          if (!response.ok) {
-            console.warn('Errore nell\'invio delle email di conferma');
-          } else {
-            console.log('Email di conferma inviate con successo');
+          try {
+            const response = await fetch('/api/send-confirmation-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(emailData),
+            });
+            
+            if (!response.ok) {
+              console.warn('Errore nell\'invio delle email di conferma ma la prenotazione è stata registrata');
+            } else {
+              console.log('Email di conferma inviate con successo');
+            }
+          } catch (emailError) {
+            console.warn('Errore nell\'invio delle email di conferma ma la prenotazione è stata registrata:', emailError);
           }
           
           setConfirmedAppointment(appointmentWithId);
@@ -902,7 +918,8 @@ function App() {
             <Shield className="w-6 h-6" />
             Rules
           </h2>
-          <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
               <div className="text-pink-600">
                 <CreditCard className="w-6 h-6" />
               </div>
@@ -910,7 +927,6 @@ function App() {
                 Metodo di pagamento accettato: Contanti o Twint; <br /> No carta di credito
               </p>
             </div>
-          <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
               <div className="text-pink-600">
                 <Clock className="w-6 h-6" />
@@ -935,7 +951,6 @@ function App() {
                 No Accompagnatori
               </p>
             </div>
-
           </div>
         </div>
 
