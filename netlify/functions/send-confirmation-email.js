@@ -352,7 +352,7 @@ const inviaEmailCancellazioneAppuntamento = async (appuntamento) => {
               </table>
             </div>
             
-            <p style="color: #666; line-height: 1.5;">Se desideri prenotare un nuovo appuntamento, visita il nostro sito web o contattaci direttamente.</p>
+            <p style="color: #666; line-height: 1.5;">Se desideri prenotare un nuovo appuntamento, visita il nostro sito web o contattami direttamente.</p>
             
             <div style="text-align: center; margin-top: 30px;">
               <p style="color: #d4649a; margin: 5px 0; font-weight: bold;">Grazie per la comprensione</p>

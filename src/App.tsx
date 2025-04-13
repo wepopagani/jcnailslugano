@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Phone, Sparkles, Shield, Instagram, UserX, Check, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Sparkles, Shield, Instagram, UserX, Check, CheckCircle, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
 import Admin from './pages/Admin';
 import { Helmet } from 'react-helmet';
 import { db } from './firebase';
@@ -388,7 +388,7 @@ function App() {
               setSelectedAppointment(null);
               setShowSuccess(true);
             } catch (localError) {
-              alert('Si è verificato un errore durante il salvataggio dell\'appuntamento. Per favore contattaci al numero 0766070544 o via Instagram @jcnailslugano.');
+              alert('Si è verificato un errore durante il salvataggio dell\'appuntamento. Per favore contattami al numero 0766070544 o via Instagram @jcnailslugano.');
             }
             return false;
           }
@@ -813,6 +813,14 @@ function App() {
                 No Accompagnatori
               </p>
             </div>
+            <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="text-pink-600">
+                <CreditCard className="w-6 h-6" />
+              </div>
+              <p className="text-gray-700">
+                Pagamento accettato: contanti o Twint, no carta di credito
+              </p>
+            </div>
           </div>
         </div>
 
@@ -880,7 +888,7 @@ function App() {
                 </div>
                 
                 <p className="text-gray-600">
-                  Se hai ulteriori domande o chiarimenti contattaci:
+                  Se hai ulteriori domande o chiarimenti contattami:
                 </p>
                 <div className="flex items-center justify-center gap-6">
                   <a 
