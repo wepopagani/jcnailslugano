@@ -828,7 +828,7 @@ function App() {
                 <CreditCard className="w-6 h-6" />
               </div>
               <p className="text-gray-700">
-                Pagamento accettato: contanti o Twint; <br /> No carta di credito
+                Pagamento accettato: <br /> Contanti o Twint; <br /> No carta di credito
               </p>
             </div>
           <div className="space-y-4">
