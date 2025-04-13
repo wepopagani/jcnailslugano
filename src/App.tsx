@@ -37,7 +37,10 @@ function App() {
     return currentWeekStart;
   };
 
-  const [currentWeekStart, setCurrentWeekStart] = useState(getInitialWeekStart());
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const initialWeekStart = getInitialWeekStart();
+    return findNextAvailableWeek(initialWeekStart);
+  });
   const [isWeekSelectorOpen, setIsWeekSelectorOpen] = useState(false);
   const services: Service[] = [
     { name: "Semipermanente", price: "40 CHF" },
@@ -55,6 +58,28 @@ function App() {
 
   ];
 
+  // Aggiungo una funzione per verificare se un appuntamento è già passato
+  const isAppointmentPassed = (dateOrAppointment: string | Appointment, time?: string) => {
+    let date: string;
+    let timeValue: string;
+    
+    if (typeof dateOrAppointment === 'string') {
+      date = dateOrAppointment;
+      timeValue = time || '00:00';
+    } else {
+      date = dateOrAppointment.date;
+      timeValue = dateOrAppointment.time;
+    }
+    
+    const now = new Date();
+    const [day, month, year] = date.split('/').map(Number);
+    const [hours, minutes] = timeValue.split(':').map(Number);
+    
+    const appointmentDate = new Date(year, month - 1, day, hours, minutes);
+    return appointmentDate < now;
+  };
+
+  // Modifico la funzione per generare gli appuntamenti includendo il controllo del tempo passato
   const generateAppointments = (baseDate: Date) => {
     const appointments: Appointment[] = [];
     
@@ -67,10 +92,28 @@ function App() {
       
       if (dayName === 'lunedì') {
         ['10:00', '14:30', '17:00'].forEach(time => {
+          // Non aggiungere appuntamenti passati
+          if (!isAppointmentPassed(dateStr, time)) {
+            appointments.push({
+              date: dateStr,
+              day: capitalizedDay,
+              time: time,
+              clientName: null,
+              clientSurname: null,
+              clientEmail: null,
+              phoneNumber: null,
+              instagram: null,
+              serviceType: null
+            });
+          }
+        });
+      } else if (['mercoledì', 'venerdì', 'sabato'].includes(dayName)) {
+        // Non aggiungere appuntamenti passati
+        if (!isAppointmentPassed(dateStr, '17:00')) {
           appointments.push({
             date: dateStr,
             day: capitalizedDay,
-            time: time,
+            time: '17:00',
             clientName: null,
             clientSurname: null,
             clientEmail: null,
@@ -78,35 +121,64 @@ function App() {
             instagram: null,
             serviceType: null
           });
-        });
-      } else if (['mercoledì', 'venerdì', 'sabato'].includes(dayName)) {
-        appointments.push({
-          date: dateStr,
-          day: capitalizedDay,
-          time: '17:00',
-          clientName: null,
-          clientSurname: null,
-          clientEmail: null,
-          phoneNumber: null,
-          instagram: null,
-          serviceType: null
-        });
+        }
       } else if (dayName === 'domenica') {
-        appointments.push({
-          date: dateStr,
-          day: capitalizedDay,
-          time: '10:00',
-          clientName: null,
-          clientSurname: null,
-          clientEmail: null,
-          phoneNumber: null,
-          instagram: null,
-          serviceType: null
-        });
+        // Non aggiungere appuntamenti passati
+        if (!isAppointmentPassed(dateStr, '10:00')) {
+          appointments.push({
+            date: dateStr,
+            day: capitalizedDay,
+            time: '10:00',
+            clientName: null,
+            clientSurname: null,
+            clientEmail: null,
+            phoneNumber: null,
+            instagram: null,
+            serviceType: null
+          });
+        }
       }
     }
     
     return appointments;
+  };
+
+  // Funzione per trovare la prossima settimana con appuntamenti disponibili
+  const findNextAvailableWeek = (startDate: Date, forward: boolean = true): Date => {
+    const maxWeeks = 60; // Limite massimo di settimane future da controllare
+    let currentDate = new Date(startDate);
+    
+    for (let i = 0; i < maxWeeks; i++) {
+      // Se cerchiamo in avanti, aggiungiamo 7 giorni, altrimenti sottraiamo
+      if (forward) {
+        currentDate.setDate(currentDate.getDate() + (i === 0 ? 0 : 7));
+      } else {
+        // Per la ricerca all'indietro, assicuriamoci di non andare prima di oggi
+        if (i > 0) {
+          currentDate.setDate(currentDate.getDate() - 7);
+        }
+        
+        // Non andare prima della settimana attuale
+        const today = new Date();
+        const mondayOfThisWeek = new Date(today);
+        const dayOfWeek = today.getDay();
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        mondayOfThisWeek.setDate(today.getDate() + diffToMonday);
+        
+        if (currentDate < mondayOfThisWeek) {
+          return mondayOfThisWeek;
+        }
+      }
+      
+      // Verifica se questa settimana ha appuntamenti disponibili
+      const appointments = generateAppointments(currentDate);
+      if (appointments.length > 0) {
+        return currentDate;
+      }
+    }
+    
+    // Se non troviamo settimane future disponibili, torniamo alla data originale
+    return startDate;
   };
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
@@ -130,18 +202,13 @@ function App() {
         })) as Appointment[];
 
         // Funzione per verificare se un appuntamento è già passato
-        const isAppointmentPassed = (appointment: Appointment) => {
-          const now = new Date();
-          const [day, month, year] = appointment.date.split('/').map(Number);
-          const [hours, minutes] = appointment.time.split(':').map(Number);
-          
-          const appointmentDate = new Date(year, month - 1, day, hours, minutes);
-          return appointmentDate < now;
+        const isPassedAppointment = (appointment: Appointment) => {
+          return isAppointmentPassed(appointment);
         };
 
         // Elimina dal database gli appuntamenti passati
         const deletePassedAppointments = async () => {
-          const passedAppointments = loadedAppointments.filter(isAppointmentPassed);
+          const passedAppointments = loadedAppointments.filter(isPassedAppointment);
           
           for (const apt of passedAppointments) {
             if (apt.id) {
@@ -255,25 +322,28 @@ function App() {
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
 
+  // Modifico la funzione per gestire la navigazione tra le settimane
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentWeekStart);
+    
     if (direction === 'next') {
-      newDate.setDate(newDate.getDate() + 7);
+      // Trova la prossima settimana disponibile
+      const nextAvailableWeek = findNextAvailableWeek(newDate, true);
       
       // Limitare la navigazione a 60 giorni nel futuro
       const maxDate = new Date();
       maxDate.setDate(maxDate.getDate() + 60);
       
-      if (newDate <= maxDate) {
-        setCurrentWeekStart(newDate);
+      if (nextAvailableWeek <= maxDate) {
+        setCurrentWeekStart(nextAvailableWeek);
       }
     } else {
-      // Andiamo alla settimana precedente, ma non più indietro di oggi
-      newDate.setDate(newDate.getDate() - 7);
+      // Trova la settimana precedente disponibile
+      const prevAvailableWeek = findNextAvailableWeek(newDate, false);
       
       // Consenti di vedere qualsiasi periodo (anche passato) solo se siamo in vista admin
       if (isAdminView) {
-        setCurrentWeekStart(newDate);
+        setCurrentWeekStart(prevAvailableWeek);
       } else {
         // Per l'utente normale, impedisci di navigare prima di oggi
         const today = new Date();
@@ -285,8 +355,8 @@ function App() {
         const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
         mondayOfThisWeek.setDate(today.getDate() + diffToMonday);
         
-        if (newDate >= mondayOfThisWeek) {
-          setCurrentWeekStart(newDate);
+        if (prevAvailableWeek >= mondayOfThisWeek) {
+          setCurrentWeekStart(prevAvailableWeek);
         }
       }
     }
@@ -763,6 +833,14 @@ function App() {
                         return null;
                       }
                       
+                      // Verifica se questa settimana ha appuntamenti disponibili
+                      const hasAppointments = generateAppointments(weekStart).length > 0;
+                      
+                      // Mostra solo settimane con appuntamenti disponibili
+                      if (!hasAppointments) {
+                        return null;
+                      }
+                      
                       const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
                       
                       return (
@@ -829,7 +907,7 @@ function App() {
                 <CreditCard className="w-6 h-6" />
               </div>
               <p className="text-gray-700">
-                Metodo di pagamento accettato: <br /> Contanti o Twint; <br /> No carta di credito
+                Metodo di pagamento accettato: Contanti o Twint; <br /> No carta di credito
               </p>
             </div>
           <div className="space-y-4">
