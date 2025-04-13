@@ -42,10 +42,9 @@ function App() {
   const services: Service[] = [
     { name: "Semipermanente", price: "40 CHF" },
     { name: "Ricostruzione base", price: "60 CHF" },
-    { name: "Ricostruzione S", price: "+5 CHF" },
-    { name: "Ricostruzione M", price: "+10 CHF" },
-    { name: "Ricostruzione L", price: "+15 CHF" },
-    { name: "Ricostruzione XL", price: "+20 CHF" },
+    { name: "Ricostruzione M", price: "+5 CHF" },
+    { name: "Ricostruzione L", price: "+10 CHF" },
+    { name: "Ricostruzione XL", price: "+15 CHF" },
     { name: "Refill", price: "50 CHF" },
     { name: "Copertura in gel", price: "50 CHF" },
     { name: "Smontaggio", price: "+10 CHF" },
@@ -129,19 +128,54 @@ function App() {
           id: doc.id
         })) as Appointment[];
 
+        // Funzione per verificare se un appuntamento è già passato
+        const isAppointmentPassed = (appointment: Appointment) => {
+          const now = new Date();
+          const [day, month, year] = appointment.date.split('/').map(Number);
+          const [hours, minutes] = appointment.time.split(':').map(Number);
+          
+          const appointmentDate = new Date(year, month - 1, day, hours, minutes);
+          return appointmentDate < now;
+        };
+
+        // Elimina dal database gli appuntamenti passati
+        const deletePassedAppointments = async () => {
+          const passedAppointments = loadedAppointments.filter(isAppointmentPassed);
+          
+          for (const apt of passedAppointments) {
+            if (apt.id) {
+              try {
+                const appointmentRef = doc(db, 'appointments', apt.id);
+                await deleteDoc(appointmentRef);
+                console.log(`Appuntamento passato eliminato: ${apt.date} ${apt.time}`);
+              } catch (error) {
+                console.error('Errore nell\'eliminazione di un appuntamento passato:', error);
+              }
+            }
+          }
+        };
+
+        // Esegui la pulizia se non siamo in vista admin
+        if (!isAdminView) {
+          deletePassedAppointments();
+        }
+
         if (isAdminView) {
           // In vista admin, usa tutti gli appuntamenti caricati
           setAppointments(loadedAppointments);
         } else {
-          // In vista cliente, filtra per la settimana corrente
+          // In vista cliente, filtra per la settimana corrente e rimuovi quelli passati
           const generatedAppointments = generateAppointments(currentWeekStart);
           
-          const mergedAppointments = generatedAppointments.map(genApt => {
+          // Filtra gli appuntamenti generati per rimuovere quelli passati
+          const filteredGeneratedAppointments = generatedAppointments.filter(apt => !isAppointmentPassed(apt));
+          
+          const mergedAppointments = filteredGeneratedAppointments.map(genApt => {
             const existingApt = loadedAppointments.find(
               loadedApt => loadedApt.date === genApt.date && loadedApt.time === genApt.time
             );
             return existingApt || genApt;
-          });
+          }).filter(apt => !isAppointmentPassed(apt)); // Filtro finale per rimuovere appuntamenti passati
 
           setAppointments(mergedAppointments);
         }
@@ -151,7 +185,7 @@ function App() {
     };
 
     loadAppointments();
-  }, [currentWeekStart, isAdminView]); // Aggiungi isAdminView come dipendenza
+  }, [currentWeekStart, isAdminView]);
 
   // Dopo l'hook useEffect esistente per caricare gli appuntamenti
   useEffect(() => {
@@ -209,32 +243,6 @@ function App() {
       window.removeEventListener('online', handleOnline);
     };
   }, []);
-
-  // Controlla se ci sono appuntamenti disponibili nella settimana corrente
-  // Se non ce ne sono, passa automaticamente alla settimana successiva
-  useEffect(() => {
-    if (!isAdminView) {
-      const now = new Date();
-      
-      // Filtra appuntamenti futuri e disponibili
-      const availableAppointments = appointments.filter(apt => {
-        // Converti data e ora dell'appuntamento in oggetto Date
-        const [day, month, year] = apt.date.split('/').map(Number);
-        const [hours, minutes] = apt.time.split(':').map(Number);
-        const appointmentDate = new Date(year, month - 1, day, hours, minutes);
-        
-        // Consideralo disponibile solo se è nel futuro e non ha un cliente
-        return appointmentDate > now && apt.clientName === null;
-      });
-      
-      // Se non ci sono appuntamenti disponibili in questa settimana, passa alla prossima
-      if (availableAppointments.length === 0 && appointments.length > 0) {
-        const newWeekStart = new Date(currentWeekStart);
-        newWeekStart.setDate(newWeekStart.getDate() + 7);
-        setCurrentWeekStart(newWeekStart);
-      }
-    }
-  }, [appointments, currentWeekStart, isAdminView]);
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [fullName, setFullName] = useState('');
@@ -306,7 +314,7 @@ function App() {
         time: selectedAppointment.time,
         clientName: firstName,
         clientSurname: lastName,
-        clientEmail: null,
+        clientEmail: email,
         phoneNumber,
         instagram: instagram || null,
         serviceType
@@ -353,7 +361,7 @@ function App() {
           
           const emailData = {
             clientName: firstName + (lastName ? ' ' + lastName : ''),
-            clientEmail: null,
+            clientEmail: email,
             phoneNumber,
             instagram: instagram || 'Non specificato',
             date: selectedAppointment.date,
@@ -786,17 +794,7 @@ function App() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {appointments
-              .filter(apt => {
-                // Filtra solo appuntamenti futuri e disponibili
-                if (apt.clientName !== null) return false;
-                
-                const [day, month, year] = apt.date.split('/').map(Number);
-                const [hours, minutes] = apt.time.split(':').map(Number);
-                const appointmentDate = new Date(year, month - 1, day, hours, minutes);
-                
-                // Mantieni solo gli appuntamenti futuri
-                return appointmentDate > new Date();
-              })
+              .filter(apt => !apt.clientName)
               .map((apt, index) => (
                 <div 
                   key={`${apt.date}-${apt.time}-${index}`}
@@ -825,6 +823,14 @@ function App() {
             <Shield className="w-6 h-6" />
             Rules
           </h2>
+          <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
+              <div className="text-pink-600">
+                <CreditCard className="w-6 h-6" />
+              </div>
+              <p className="text-gray-700">
+                Pagamento accettato: contanti o Twint; <br /> No carta di credito
+              </p>
+            </div>
           <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
               <div className="text-pink-600">
@@ -850,14 +856,7 @@ function App() {
                 No Accompagnatori
               </p>
             </div>
-            <div className="flex items-center gap-4 p-4 rounded-lg border border-pink-100 hover:bg-pink-50 transition-colors">
-              <div className="text-pink-600">
-                <CreditCard className="w-6 h-6" />
-              </div>
-              <p className="text-gray-700">
-                Pagamento accettato: contanti o Twint, no carta di credito
-              </p>
-            </div>
+
           </div>
         </div>
 
@@ -982,6 +981,13 @@ function App() {
                 className="w-full p-2 border border-pink-200 rounded-lg"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+              />
+              <input
+                type="email"
+                placeholder="Email (facoltativo)"
+                className="w-full p-2 border border-pink-200 rounded-lg"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
               <div className="relative">
                 <span className="absolute left-2 top-2 text-gray-500">@</span>
